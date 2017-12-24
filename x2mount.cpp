@@ -201,48 +201,7 @@ int X2Mount::execModalSettingsDialog(void)
 	}
 	
 	// Set values in the userinterface
-	
-	dx->setPropertyString("lineEdit", "text", m_PortName);
-	
-	dx->comboBoxAppendString("comboBox", "12 O'Clock");
-	dx->comboBoxAppendString("comboBox", "3 O'Clock");
-	dx->comboBoxAppendString("comboBox", "6 O'Clock");
-	dx->comboBoxAppendString("comboBox", "9 O'Clock");
-	if (m_HomePolarisClock != -1) dx->setCurrentIndex("comboBox", m_HomePolarisClock);
-	
-	for (i = 0; i < NGUIDESPEEDS; i++) {
-		dx->comboBoxAppendString("comboBox_2", GuideSpeedNames[i]);
-	}
-	if (m_iST4GuideRateIndex != -1) dx->setCurrentIndex("comboBox_2", m_iST4GuideRateIndex);
-	
-	// Now set the post-slew delay time
-	dx->setPropertyInt("spinBox", "value", m_iPostSlewDelay);
-	
-	// Now enable and disable relevant buttons
-	if (m_bPolarisHomeAlignmentSet && mATCS.isConnected() && !m_bParked) {
-		dx->setEnabled("pushButton_2", true);				  // Move to right polar alignment slot
-	}
-	else {
-		dx->setEnabled("pushButton_2", false);				 // Cannot move while parked, not connected or haven't aligned the reticule yet
-	}
-	
-	if (mATCS.isConnected()) {
-		dx->setEnabled("lineEdit", false);					 // Cannot edit the port name while connected.
-	}
-	if (!mATCS.isConnected() || m_bParked) {
-		dx->setEnabled("pushButton", false);				 // Must be conneected and not parked to set polar alignment home location
-		dx->setEnabled("comboBox", false);
-	}
-	if (!mATCS.isConnected()) {
-		dx->setPropertyString("label_4", "text", "Disconnected");
-	}
-	else if (m_bParked) {
-		dx->setPropertyString("label_4", "text", "Parked");
-	}
-	else {
-		dx->setPropertyString("label_4", "text", "Unparked");
-	}
-	
+
 	//Display the user interface
 	if ((nErr = ui->exec(bPressedOK)))
 		return nErr;
@@ -250,25 +209,6 @@ int X2Mount::execModalSettingsDialog(void)
 	//Retreive values from the user interface
 	if (bPressedOK)
 	{
-#ifdef ATCS_X2_DEBUG
-		if (LogFile) {
-			ltime = time(NULL);
-			timestamp = asctime(localtime(&ltime));
-			timestamp[strlen(timestamp) - 1] = 0;
-			fprintf(LogFile, "[%s] execModealSetting:: Pressed OK button\n", timestamp);
-            fflush(LogFile);
-		}
-#endif
-
-#ifdef ATCS_X2_DEBUG
-		if (LogFile){
-			ltime = time(NULL);
-			timestamp = asctime(localtime(&ltime));
-			timestamp[strlen(timestamp) - 1] = 0;
-			fprintf(LogFile, "[%s] execModealSetting:: Port Name %s\n", timestamp, m_PortName);
-            fflush(LogFile);
-		}
-#endif
 	}
 	return nErr;
 }
@@ -361,7 +301,7 @@ void X2Mount::deviceInfoNameShort(BasicStringInterface& str) const
         str = cModel;
     }
     else
-        str = "N/A";
+        str = "Not connected";
 }
 void X2Mount::deviceInfoNameLong(BasicStringInterface& str) const
 {
@@ -370,7 +310,7 @@ void X2Mount::deviceInfoNameLong(BasicStringInterface& str) const
 }
 void X2Mount::deviceInfoDetailedDescription(BasicStringInterface& str) const
 {
-	str = "Astrometric Telescope Control System";
+	str = "Astrometric Instruments Telescope Control System";
 	
 }
 void X2Mount::deviceInfoFirmwareVersion(BasicStringInterface& str)
@@ -382,7 +322,7 @@ void X2Mount::deviceInfoFirmwareVersion(BasicStringInterface& str)
         str = cFirmware;
     }
     else
-        str = "N/A";
+        str = "Not connected";
 }
 void X2Mount::deviceInfoModel(BasicStringInterface& str)
 {
@@ -393,7 +333,7 @@ void X2Mount::deviceInfoModel(BasicStringInterface& str)
         str = cModel;
     }
     else
-        str = "N/A";
+        str = "Not connected";
 }
 
 //Common Mount specifics

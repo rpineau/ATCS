@@ -472,7 +472,7 @@ int ATCS::setAlignFromTargetRA_DecCalcSideEpochNow()
     int nErr;
     char szResp[SERIAL_BUFFER_SIZE];
 
-    nErr = ATCSSendCommand("!AFcs;", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!AFcn;", szResp, SERIAL_BUFFER_SIZE);
 
     return nErr;
 }
