@@ -57,6 +57,7 @@ int ATCS::Connect(char *pszPort)
 
     // disable any async message from the controller
     setAsyncUpdateEnabled(false);
+    setEpochOfEntry("2000"); // default is 2000 in TSX
     return SB_OK;
 }
 
@@ -157,7 +158,10 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
-        fprintf(Logfile, "[%s] [ATCS::domeCommand] error %d reading response : %s\n", timestamp, nErr, szResp);
+        if(szResp[0] == ATCL_NACK )
+            fprintf(Logfile, "[%s] [ATCS::domeCommand] ERROR reading response , ATCL_NACK received\n", timestamp);
+        else
+            fprintf(Logfile, "[%s] [ATCS::domeCommand] error %d reading response : %s\n", timestamp, nErr, szResp);
         fflush(Logfile);
 #endif
         return nErr;
@@ -169,7 +173,12 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::domeCommand] got response : '%s'\n", timestamp, szResp);
+    if(szResp[0] == ATCL_ACK )
+        fprintf(Logfile, "[%s] [ATCS::domeCommand] got ATCL_ACK (%02X) \n", timestamp, szResp[0]);
+    else if(szResp[0] == ATCL_NACK )
+        fprintf(Logfile, "[%s] [ATCS::domeCommand] got ATCL_NACK (%02X) \n", timestamp, szResp[0]);
+    else
+        fprintf(Logfile, "[%s] [ATCS::domeCommand] got response : '%s'\n", timestamp, szResp);
     fflush(Logfile);
 #endif
 
@@ -197,6 +206,14 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, int nBufferLen)
             }
             return nErr;
         }
+
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::readResponse] *pszBufPtr = 0x%02X\n", timestamp, *pszBufPtr);
+        fflush(Logfile);
+#endif
 
         if (ulBytesRead !=1) {// timeout
             if (m_bDebugLog) {
@@ -436,6 +453,18 @@ int ATCS::setAsyncUpdateEnabled(bool bEnable)
     else  {
         snprintf(szCmd, SERIAL_BUFFER_SIZE, "!QSauNo;");
     }
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+int ATCS::setEpochOfEntry(char *szEpoch)
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!PSep%s;", szEpoch);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
     return nErr;

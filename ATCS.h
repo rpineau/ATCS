@@ -107,6 +107,7 @@ private:
     int     setTarget(double dRa, double dDec);
 
     int     setAsyncUpdateEnabled(bool bEnable);
+    int     setEpochOfEntry(char *szEpoch);
 
     void    convertDecDegToDDMMSS(double dDeg, char *szResult, int size);
     int     convertDDMMSSToDecDeg(char *szStrDeg, double &dDecDeg);
