@@ -82,9 +82,8 @@ int X2Mount::queryAbstraction(const char* pszName, void** ppVal)
 	    *ppVal = dynamic_cast<SyncMountInterface*>(this);
 	if (!strcmp(pszName, SlewToInterface_Name))
 		*ppVal = dynamic_cast<SlewToInterface*>(this);
-	else if (!strcmp(pszName, AsymmetricalEquatorialInterface_Name)) {
+	else if (!strcmp(pszName, AsymmetricalEquatorialInterface_Name))
 		*ppVal = dynamic_cast<AsymmetricalEquatorialInterface*>(this);
-	}
 	else if (!strcmp(pszName, OpenLoopMoveInterface_Name))
 		*ppVal = dynamic_cast<OpenLoopMoveInterface*>(this);
 	else if (!strcmp(pszName, NeedsRefractionInterface_Name))
@@ -109,7 +108,11 @@ int X2Mount::queryAbstraction(const char* pszName, void** ppVal)
 //OpenLoopMoveInterface
 int X2Mount::startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const int& nRateIndex)
 {
-	X2MutexLocker ml(GetMutex());
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
+
 	m_CurrentRateIndex = nRateIndex;
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
@@ -121,12 +124,19 @@ int X2Mount::startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const i
 	}
 #endif
     // mATCS.StartOpenSlew(Dir, SlewSpeeds[nRateIndex]);
+    // do stuff
+
     return SB_OK;
 }
 
 int X2Mount::endOpenLoopMove(void)
 {
 	int nErr = SB_OK;
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
+
 #ifdef ATCS_X2_DEBUG
 	if (LogFile){
 		time_t ltime = time(NULL);
@@ -136,7 +146,7 @@ int X2Mount::endOpenLoopMove(void)
         fflush(LogFile);
 	}
 #endif
-	X2MutexLocker ml(GetMutex());
+    // do stuff
     return nErr;
 }
 
@@ -345,6 +355,7 @@ void X2Mount::deviceInfoNameShort(BasicStringInterface& str) const
 {
     if(m_bLinked) {
         X2Mount* pMe = (X2Mount*)this;
+        X2MutexLocker ml(pMe->GetMutex());
         char cModel[SERIAL_BUFFER_SIZE];
         pMe->mATCS.getModel(cModel, SERIAL_BUFFER_SIZE);
         str = cModel;
@@ -366,6 +377,7 @@ void X2Mount::deviceInfoFirmwareVersion(BasicStringInterface& str)
 {
     if(m_bLinked) {
         char cFirmware[SERIAL_BUFFER_SIZE];
+        X2MutexLocker ml(GetMutex());
         mATCS.getFirmwareVersion(cFirmware, SERIAL_BUFFER_SIZE);
         str = cFirmware;
     }
@@ -376,6 +388,7 @@ void X2Mount::deviceInfoModel(BasicStringInterface& str)
 {
     if(m_bLinked) {
         char cModel[SERIAL_BUFFER_SIZE];
+        X2MutexLocker ml(GetMutex());
         mATCS.getModel(cModel, SERIAL_BUFFER_SIZE);
         str = cModel;
     }
@@ -388,6 +401,9 @@ int X2Mount::raDec(double& ra, double& dec, const bool& bCached)
 {
 	int nErr = 0;
 
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
     X2MutexLocker ml(GetMutex());
 	
 	// Get the RA and DEC from the mount
@@ -398,6 +414,11 @@ int X2Mount::raDec(double& ra, double& dec, const bool& bCached)
 int X2Mount::abort(void)
 {
     int nErr = SB_OK;
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
+
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
 		time_t ltime = time(NULL);
@@ -407,7 +428,7 @@ int X2Mount::abort(void)
         fflush(LogFile);
 	}
 #endif
-	X2MutexLocker ml(GetMutex());
+
     nErr = mATCS.Abort();
     return nErr;
 }
@@ -415,6 +436,12 @@ int X2Mount::abort(void)
 int X2Mount::startSlewTo(const double& dRa, const double& dDec)
 {
 	int nErr = SB_OK;
+
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
+
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
 		time_t ltime = time(NULL);
@@ -424,7 +451,7 @@ int X2Mount::startSlewTo(const double& dRa, const double& dDec)
         fflush(LogFile);
 	}
 #endif
-	X2MutexLocker ml(GetMutex());
+
     // nErr = mATCS.StartSlewTo(dRa, dDec);
 	m_wasslewing = true;
 	return nErr;
@@ -432,7 +459,13 @@ int X2Mount::startSlewTo(const double& dRa, const double& dDec)
 
 int X2Mount::isCompleteSlewTo(bool& bComplete) const
 {
-	// bComplete = mATCS.GetIsNotGoto();
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2Mount* pMe = (X2Mount*)this;
+    X2MutexLocker ml(pMe->GetMutex());
+
+    // bComplete = mATCS.GetIsNotGoto();
 	
     bComplete = true; // FIXME
 	return SB_OK;
@@ -440,20 +473,23 @@ int X2Mount::isCompleteSlewTo(bool& bComplete) const
 
 int X2Mount::endSlewTo(void)
 {
-	X2MutexLocker ml(GetMutex()); // Stop any other commands getting to the mount until delay is finished.
-	// No need to start tracking
-	// But start a post-slew delay
-	m_pSleeper->sleep(m_iPostSlewDelay * 1000);
-	m_wasslewing = false;
-	
-	return SB_OK;
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
+    // do stuff
+    return SB_OK;
 }
 
 
 int X2Mount::syncMount(const double& ra, const double& dec)
 {
-	X2MutexLocker ml(GetMutex());
 	int nErr = SB_OK;
+
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
 
 #ifdef ATCS_X2_DEBUG
     if (LogFile) {
@@ -464,7 +500,8 @@ int X2Mount::syncMount(const double& ra, const double& dec)
         fflush(LogFile);
     }
 #endif
-	nErr = mATCS.syncTo(ra, dec);
+
+    nErr = mATCS.syncTo(ra, dec);
 
 	return nErr;
 }
@@ -472,6 +509,9 @@ int X2Mount::syncMount(const double& ra, const double& dec)
 bool X2Mount::isSynced(void)
 {
     int nErr;
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
     X2MutexLocker ml(GetMutex());
     nErr = mATCS.isSynced(m_bSynced);
 	return m_bSynced;
@@ -480,7 +520,11 @@ bool X2Mount::isSynced(void)
 int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates, const double& dRaRateArcSecPerSec, const double& dDecRateArcSecPerSec)
 {
     int nErr = SB_OK;
-	X2MutexLocker ml(GetMutex());
+
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
 		time_t ltime = time(NULL);
@@ -497,7 +541,10 @@ int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates,
 
 int X2Mount::trackingRates(bool& bTrackingOn, double& dRaRateArcSecPerSec, double& dDecRateArcSecPerSec)
 {
-	X2MutexLocker ml(GetMutex());
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
 	bTrackingOn = false;
 	dRaRateArcSecPerSec = -1000.0;
 	dDecRateArcSecPerSec = -1000.0;
@@ -521,7 +568,9 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
 {
 	double dRa, dDec;
 	int nErr = SB_OK;
-	
+
+    if(!m_bLinked)
+        return ERR_NOLINK;
 	
 	X2MutexLocker ml(GetMutex());
 	nErr = m_pTheSkyXForMounts->HzToEq(dAz, dAlt, dRa, dDec);
@@ -568,6 +617,9 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
 
 int X2Mount::isCompletePark(bool& bComplete) const
 {
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
 		time_t ltime = time(NULL);
@@ -592,6 +644,9 @@ int		X2Mount::startUnpark(void)
 /*!Called to monitor the unpark process.  \param bComplete Set to true if the unpark is complete, otherwise set to false.*/
 int X2Mount::isCompleteUnpark(bool& bComplete) const
 {
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
     X2Mount* pMe = (X2Mount*)this;
 
 	bComplete = true;
