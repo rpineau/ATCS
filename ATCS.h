@@ -93,7 +93,8 @@ private:
 	bool    m_bIsConnected;                               // Connected to the mount?
     char    m_szFirmwareVersion[SERIAL_BUFFER_SIZE];
 
-    char     m_szHardwareModel[SERIAL_BUFFER_SIZE];
+    char    m_szHardwareModel[SERIAL_BUFFER_SIZE];
+    char    m_szEpoch[32];
 
 	double  m_dGotoRATarget;						  // Current Target RA;
 	double  m_dGotoDECTarget;                      // Current Goto Target Dec;
@@ -107,15 +108,17 @@ private:
     int     setTarget(double dRa, double dDec);
 
     int     setAsyncUpdateEnabled(bool bEnable);
-    int     setEpochOfEntry(char *szEpoch);
+    int     setEpochOfEntry(const char *szEpoch);
+    int     setAlignFromTargetRA_DecCalcSide();
+    int     setAlignFromTargetRA_DecCalcSideEpochNow();
 
     void    convertDecDegToDDMMSS(double dDeg, char *szResult, int size);
-    int     convertDDMMSSToDecDeg(char *szStrDeg, double &dDecDeg);
+    int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);
     
     void    convertRaToHHMMSSt(double dRa, char *szResult, int size);
-    int     convertHHMMSStToRa(char *szStrRa, double &dRa);
+    int     convertHHMMSStToRa(const char *szStrRa, double &dRa);
 
-    int     parseFields(char *pszResp, std::vector<std::string> &svFields, char cSeparator);
+    int     parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator);
 
 #ifdef ATCS_DEBUG
 	// timestamp for logs

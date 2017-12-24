@@ -9,25 +9,17 @@
 #include "../../licensedinterfaces/theskyxfacadefordriversinterface.h"
 #include "../../licensedinterfaces/sleeperinterface.h"
 #include "../../licensedinterfaces/loggerinterface.h"
-#include "../../licensedinterfaces/basiciniutilinterface.h"
 #include "../../licensedinterfaces/mutexinterface.h"
 #include "../../licensedinterfaces/tickcountinterface.h"
 #include "../../licensedinterfaces/serialportparams2interface.h"
 #include "../../licensedinterfaces/modalsettingsdialoginterface.h"
 #include "../../licensedinterfaces/x2guiinterface.h"
-
-
-#include "../../licensedinterfaces/mount/asymmetricalequatorialinterface.h"
-#include "../../licensedinterfaces/mount/needsrefractioninterface.h"
 #include "../../licensedinterfaces/mountdriverinterface.h"
-
-//Optional interfaces, uncomment and implement as required.
 #include "../../licensedinterfaces/mount/slewtointerface.h"
 #include "../../licensedinterfaces/mount/syncmountinterface.h"
 #include "../../licensedinterfaces/mount/asymmetricalequatorialinterface.h"
 #include "../../licensedinterfaces/mount/openloopmoveinterface.h"
 #include "../../licensedinterfaces/mount/needsrefractioninterface.h"
-//#include "../../licensedinterfaces/mount/linkfromuithreadinterface.h"
 #include "../../licensedinterfaces/mount/trackingratesinterface.h"
 #include "../../licensedinterfaces/parkinterface.h"
 #include "../../licensedinterfaces/unparkinterface.h"

@@ -57,7 +57,8 @@ int ATCS::Connect(char *pszPort)
 
     // disable any async message from the controller
     setAsyncUpdateEnabled(false);
-    setEpochOfEntry("2000"); // default is 2000 in TSX
+    snprintf(m_szEpoch, 32, "Now");
+    setEpochOfEntry(m_szEpoch);
     return SB_OK;
 }
 
@@ -458,7 +459,7 @@ int ATCS::setAsyncUpdateEnabled(bool bEnable)
     return nErr;
 }
 
-int ATCS::setEpochOfEntry(char *szEpoch)
+int ATCS::setEpochOfEntry(const char *szEpoch)
 {
     int nErr;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -469,6 +470,27 @@ int ATCS::setEpochOfEntry(char *szEpoch)
 
     return nErr;
 }
+
+int ATCS::setAlignFromTargetRA_DecCalcSide()
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!AFcs;", szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+int ATCS::setAlignFromTargetRA_DecCalcSideEpochNow()
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!AFcs;", szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
 
 void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, int size)
 {
@@ -487,7 +509,7 @@ void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, int size)
     snprintf(szResult, size, "%c%02d:%02d:%02d", cSign, DD, MM, SS);
 }
 
-int ATCS::convertDDMMSSToDecDeg(char *szStrDeg, double &dDecDeg)
+int ATCS::convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg)
 {
     int nErr = ATCS_OK;
     std::vector<std::string> vFieldsData;
@@ -521,7 +543,7 @@ void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, int size)
     snprintf(szResult,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.1f", HH, MM, SSt);
 }
 
-int ATCS::convertHHMMSStToRa(char *szStrRa, double &dRa)
+int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
 {
     int nErr = ATCS_OK;
     std::vector<std::string> vFieldsData;
@@ -542,11 +564,11 @@ int ATCS::convertHHMMSStToRa(char *szStrRa, double &dRa)
 }
 
 
-int ATCS::parseFields(char *pszResp, std::vector<std::string> &svFields, char cSeparator)
+int ATCS::parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator)
 {
     int nErr = ATCS_OK;
     std::string sSegment;
-    std::stringstream ssTmp(pszResp);
+    std::stringstream ssTmp(pszIn);
 
     svFields.clear();
     // split the string into vector elements
