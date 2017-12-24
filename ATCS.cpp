@@ -9,7 +9,7 @@ ATCS::ATCS()
 	m_bParkInProgress = false;
 
     m_bDebugLog = true;
-    
+
 #ifdef	ATCS_DEBUG
 	Logfile = fopen(ATCS_LOGFILENAME, "w");
 	ltime = time(NULL);
@@ -91,36 +91,22 @@ int ATCS::Disconnect(void)
 }
 
 
-int ATCS::getNbSlewSpeed()
+int ATCS::getNbSlewRates()
 {
     return ATCS_NB_SLEW_SPEEDS;
 }
 
 // returns "Slew", "ViewVel4", "ViewVel3", "ViewVel2", "ViewVel1"
-void ATCS::getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize)
+int ATCS::getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize)
 {
-    switch(nZeroBasedIndex) {
-        case 0:
-            strncpy(pszOut, "Slew", nOutMaxSize);
-            break;
-        case 1:
-            strncpy(pszOut, "ViewVel4", nOutMaxSize);
-            break;
-        case 2:
-            strncpy(pszOut, "ViewVel3", nOutMaxSize);
-            break;
-        case 3:
-            strncpy(pszOut, "ViewVel2", nOutMaxSize);
-            break;
-        case 4:
-            strncpy(pszOut, "ViewVel1", nOutMaxSize);
-            break;
-        default :
-            strncpy(pszOut, "Slew", nOutMaxSize);
-            break;
-    }
+    if (nZeroBasedIndex > ATCS_NB_SLEW_SPEEDS)
+        return ATCS_ERROR;
 
+    strncpy(pszOut, m_aszSlewRateNames[nZeroBasedIndex], nOutMaxSize);
+
+    return ATCS_OK;
 }
+
 #pragma mark - ATCS communication
 
 int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen)

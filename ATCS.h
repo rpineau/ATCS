@@ -38,7 +38,7 @@
 
 // Next turns string charcter representing a HEX code into a number
 #define HEX(c) (((c) < 'A')?((c)-'0'):((c) - 'A') + 10)
-enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED};
+enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, ATCS_ERROR};
 
 #define SERIAL_BUFFER_SIZE 256
 #define MAX_TIMEOUT 5000
@@ -49,6 +49,10 @@ enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPO
 #define ATCL_ACK    0x8F
 #define ATCL_NACK    0xA5
 #define ATCS_NB_SLEW_SPEEDS 5
+#define ATCS_SLEW_NAME_LENGHT 12
+
+
+
 
 // Define Class for ATCS
 class ATCS
@@ -66,8 +70,8 @@ public:
     void    setTSX(TheSkyXFacadeForDriversInterface *pTSX) { m_pTsx = pTSX;};
     void    setSleeper(SleeperInterface *pSleeper) { m_pSleeper = pSleeper;};
 
-    int getNbSlewSpeed();
-    void getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize);
+    int getNbSlewRates();
+    int getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize);
     
     int getFirmwareVersion(char *version, int strMaxLen);
     int getModel(char *model, int strMaxLen);
@@ -119,6 +123,8 @@ private:
     int     convertHHMMSStToRa(const char *szStrRa, double &dRa);
 
     int     parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator);
+
+    const char m_aszSlewRateNames[ATCS_NB_SLEW_SPEEDS][ATCS_SLEW_NAME_LENGHT] = { "Slew", "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4"};
 
 #ifdef ATCS_DEBUG
 	// timestamp for logs

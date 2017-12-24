@@ -153,7 +153,7 @@ int X2Mount::endOpenLoopMove(void)
 int X2Mount::rateCountOpenLoopMove(void) const
 {
     X2Mount* pMe = (X2Mount*)this;
-	return pMe->mATCS.getNbSlewSpeed();
+	return pMe->mATCS.getNbSlewRates();
 }
 
 int X2Mount::rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* pszOut, const int& nOutMaxSize)
