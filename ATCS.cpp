@@ -18,6 +18,7 @@ ATCS::ATCS()
 	fprintf(Logfile, "[%s] ATCS New Constructor Called\n", timestamp);
     fflush(Logfile);
 #endif
+
 }
 
 
@@ -44,6 +45,7 @@ int ATCS::Connect(char *pszPort)
 	fprintf(Logfile, "[%s] ATCS::Connect Called %s\n", timestamp, pszPort);
     fflush(Logfile);
 #endif
+
     // 19200 8N1
     if(m_pSerx->open(pszPort, 19200, SerXInterface::B_NOPARITY, "-DTR_CONTROL 1") == 0)
         m_bIsConnected = true;
@@ -87,6 +89,36 @@ int ATCS::Disconnect(void)
 }
 
 
+int ATCS::getNbSlewSpeed()
+{
+    return ATCS_NB_SLEW_SPEEDS;
+}
+
+// returns "Slew", "ViewVel4", "ViewVel3", "ViewVel2", "ViewVel1"
+void ATCS::getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize)
+{
+    switch(nZeroBasedIndex) {
+        case 0:
+            strncpy(pszOut, "Slew", nOutMaxSize);
+            break;
+        case 1:
+            strncpy(pszOut, "ViewVel4", nOutMaxSize);
+            break;
+        case 2:
+            strncpy(pszOut, "ViewVel3", nOutMaxSize);
+            break;
+        case 3:
+            strncpy(pszOut, "ViewVel2", nOutMaxSize);
+            break;
+        case 4:
+            strncpy(pszOut, "ViewVel1", nOutMaxSize);
+            break;
+        default :
+            strncpy(pszOut, "Slew", nOutMaxSize);
+            break;
+    }
+
+}
 #pragma mark - ATCS communication
 
 int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen)
@@ -236,7 +268,159 @@ int ATCS::getModel(char *pszModel, int nStrMaxLen)
     return nErr;
 }
 
-#pragma mark - Special commands.
+
+#pragma mark - Mount Coordinates
+
+int ATCS::getRaAndDec(double &dRa, double &dDec)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    // get RA
+    nErr = ATCSSendCommand("!CGra;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr) {
+        return nErr;
+    }
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::getRaAndDec] szResp = %s\n", timestamp, szResp);
+    fflush(Logfile);
+#endif
+
+    // if not yet synced we have no coordinates.
+    if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE) == 0) {
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::getRaAndDec] Not synced yet\n", timestamp);
+        fflush(Logfile);
+#endif
+        dRa = 0.0f;
+        dDec = 0.0f;
+        return nErr;
+    }
+
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::getRaAndDec] WTF !!\n", timestamp);
+    fflush(Logfile);
+#endif
+
+    nErr = convertHHMMSStToRa(szResp, dRa);
+    if(nErr)
+        return nErr;
+
+    // get DEC
+    nErr = ATCSSendCommand("!CGde;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+
+    nErr = convertDDMMSSToDecDeg(szResp, dDec);
+    return nErr;
+}
+
+int ATCS::setTarget(double dRa, double dDec)
+{
+    int nErr;
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szTemp[SERIAL_BUFFER_SIZE];
+
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::syncTo] Ra : %f\n", timestamp, dRa);
+    fprintf(Logfile, "[%s] [ATCS::syncTo] Dec : %f\n", timestamp, dDec);
+    fflush(Logfile);
+#endif
+
+    // convert Ra value to HH:MM:SS.T before passing them to the ATCS
+    convertRaToHHMMSSt(dRa, szTemp, SERIAL_BUFFER_SIZE);
+
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::syncTo] Ra : %s\n", timestamp, szTemp);
+    fflush(Logfile);
+#endif
+    // set target Ra
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStr%s;", szTemp);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    convertDecDegToDDMMSS(dDec, szTemp, SERIAL_BUFFER_SIZE);
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::syncTo] Dec : %s\n", timestamp, szTemp);
+    fflush(Logfile);
+#endif
+    // set target dec
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStd%s;", szTemp);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+
+    return nErr;
+}
+
+int ATCS::syncTo(double dRa, double dDec)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = setTarget(dRa, dDec);
+    if(nErr)
+        return nErr;
+    // Sync
+    nErr = ATCSSendCommand("!ACrn;", szResp, SERIAL_BUFFER_SIZE);
+    return nErr;
+}
+
+int ATCS::unPark()
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    nErr = ATCSSendCommand("!AFlp;", szResp, SERIAL_BUFFER_SIZE);
+    return nErr;
+}
+
+int ATCS::isSynced(bool bSyncked)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!AGas;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+
+    if(strncmp(szResp,"NotAligned",SERIAL_BUFFER_SIZE) == 0)
+        bSyncked = false;
+    else if(strncmp(szResp,"Preliminary",SERIAL_BUFFER_SIZE) == 0)
+        bSyncked = false;
+    else if(strncmp(szResp,"Complete",SERIAL_BUFFER_SIZE) == 0)
+        bSyncked = true;
+    else
+        bSyncked = false;
+
+    return nErr;
+}
+
+int ATCS::Abort()
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!XXxx;", szResp, SERIAL_BUFFER_SIZE);
+    return nErr;
+}
+
+#pragma mark - Special commands & functions
 
 int ATCS::setAsyncUpdateEnabled(bool bEnable)
 {
@@ -250,89 +434,101 @@ int ATCS::setAsyncUpdateEnabled(bool bEnable)
         snprintf(szCmd, SERIAL_BUFFER_SIZE, "!QSauYes;");
     }
     else  {
-        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!QSauYes;");
+        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!QSauNo;");
     }
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
     return nErr;
 }
 
-#pragma mark - Mount Coordinates
+void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, int size)
+{
+    char cSign;
+    int DD, MM, SS;
+    float mm, ss;
 
-int ATCS::getRaAndDec(double &dRa, double &dDec)
+    // convert dDeg decimal value to sDD:MM:SS
+
+    cSign = dDeg>=0?'+':'-';
+    DD = int(dDeg);
+    mm = dDeg - DD;
+    MM = int(mm*60);
+    ss = (mm*60) - MM;
+    SS = int(ceil(ss*60));
+    snprintf(szResult, size, "%c%02d:%02d:%02d", cSign, DD, MM, SS);
+}
+
+int ATCS::convertDDMMSSToDecDeg(char *szStrDeg, double &dDecDeg)
 {
     int nErr = ATCS_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    // get RA
-    nErr = ATCSSendCommand("!CGra;", szResp, SERIAL_BUFFER_SIZE);
+    std::vector<std::string> vFieldsData;
+
+    dDecDeg = 0;
+
+    nErr = parseFields(szStrDeg, vFieldsData, ':');
     if(nErr)
         return nErr;
-    // if not yet synced we have no coordinates.
-    if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE)) {
-        dRa = 0.0f;
-        dDec = 0.0f;
-        return nErr;
+
+    if(vFieldsData.size() >= 3) {
+        dDecDeg = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60 + atof(vFieldsData[1].c_str())/3600;
     }
-
-    dRa = atof(szResp);
-
-    // get DEC
-    nErr = ATCSSendCommand("!CGde;", szResp, SERIAL_BUFFER_SIZE);
-    if(nErr)
-        return nErr;
-    dDec = atof(szResp);
-
-    return nErr;
-}
-
-int ATCS::syncTo(double dRa, double dDec)
-{
-    int nErr = ATCS_OK;
-    double HA=0;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
-
-#ifdef ATCS_DEBUG
-    ltime = time(NULL);
-    timestamp = asctime(localtime(&ltime));
-    timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::syncTo] Ra : %f\n", timestamp, dRa);
-    fprintf(Logfile, "[%s] [ATCS::syncTo] Dec : %f\n", timestamp, dDec);
-    fflush(Logfile);
-#endif
-
-    // Determine HA from RA
-    HA = m_pTsx->hourAngle(dRa);
-
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStr%3.2f;", HA);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
-
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStd3.2%f;", dDec);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
-
-
-    // ACrn
-    nErr = ATCSSendCommand("!ACrn;", szResp, SERIAL_BUFFER_SIZE);
-    return nErr;
-}
-
-int ATCS::isSynced(bool bSyncked)
-{
-    int nErr = ATCS_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-
-    nErr = ATCSSendCommand("!AGas;", szResp, SERIAL_BUFFER_SIZE);
-    if(nErr)
-        return nErr;
-
-    if(strncmp(szResp,"NotAligned",SERIAL_BUFFER_SIZE))
-        bSyncked = false;
-    else if(strncmp(szResp,"Preliminary",SERIAL_BUFFER_SIZE))
-        bSyncked = false;
-    else if(strncmp(szResp,"Complete",SERIAL_BUFFER_SIZE))
-        bSyncked = true;
     else
-        bSyncked = false;
+        nErr = ERR_PARSE;
 
     return nErr;
 }
+
+void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, int size)
+{
+    int HH, MM;
+    float hh, mm, SSt;
+
+    // convert Ra value to HH:MM:SS.T before passing them to the ATCS
+    HH = int(dRa);
+    hh = dRa - HH;
+    MM = int(hh*60);
+    mm = (hh*60) - MM;
+    SSt = mm * 60;
+    snprintf(szResult,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.1f", HH, MM, SSt);
+}
+
+int ATCS::convertHHMMSStToRa(char *szStrRa, double &dRa)
+{
+    int nErr = ATCS_OK;
+    std::vector<std::string> vFieldsData;
+
+    dRa = 0;
+
+    nErr = parseFields(szStrRa, vFieldsData, ':');
+    if(nErr)
+        return nErr;
+
+    if(vFieldsData.size() >= 3) {
+        dRa = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60 + atof(vFieldsData[1].c_str())/3600;
+    }
+    else
+        nErr = ERR_PARSE;
+
+    return nErr;
+}
+
+
+int ATCS::parseFields(char *pszResp, std::vector<std::string> &svFields, char cSeparator)
+{
+    int nErr = ATCS_OK;
+    std::string sSegment;
+    std::stringstream ssTmp(pszResp);
+
+    svFields.clear();
+    // split the string into vector elements
+    while(std::getline(ssTmp, sSegment, cSeparator))
+    {
+        svFields.push_back(sSegment);
+    }
+
+    if(svFields.size()==0) {
+        nErr = ERR_PARSE;
+    }
+    return nErr;
+}
+

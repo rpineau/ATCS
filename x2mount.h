@@ -175,9 +175,9 @@ public:
 	
 	//OpenLoopMoveInterface
 	virtual int								startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const int& nRateIndex);
-	virtual int								endOpenLoopMove(void)															;
+	virtual int								endOpenLoopMove(void);
 	virtual bool							allowDiagonalMoves() {return true;}
-	virtual int								rateCountOpenLoopMove(void) const												;
+	virtual int								rateCountOpenLoopMove(void) const;
 	virtual int								rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* pszOut, const int& nOutMaxSize);
 	virtual int								rateIndexOpenLoopMove(void);
 	

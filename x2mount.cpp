@@ -142,13 +142,15 @@ int X2Mount::endOpenLoopMove(void)
 
 int X2Mount::rateCountOpenLoopMove(void) const
 {
-	return NSLEWSPEEDS;
+    X2Mount* pMe = (X2Mount*)this;
+	return pMe->mATCS.getNbSlewSpeed();
 }
 
 int X2Mount::rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* pszOut, const int& nOutMaxSize)
 {
-	snprintf(pszOut, nOutMaxSize, "%s", SlewSpeedNames[nZeroBasedIndex]);
-	return SB_OK;
+    mATCS.getRateName(nZeroBasedIndex, pszOut, nOutMaxSize);
+
+    return SB_OK;
 }
 
 int X2Mount::rateIndexOpenLoopMove(void)
@@ -390,16 +392,6 @@ int X2Mount::raDec(double& ra, double& dec, const bool& bCached)
 	
 	// Get the RA and DEC from the mount
 	nErr = mATCS.getRaAndDec(ra, dec);
-
-#ifdef ATCS_X2_DEBUG
-	if (LogFile) {
-		time_t ltime = time(NULL);
-		char *timestamp = asctime(localtime(&ltime));
-		timestamp[strlen(timestamp) - 1] = 0;
-		fprintf(LogFile, "[%s] raDec Ra: %f Dec %f\n", timestamp, ra, dec);
-        fflush(LogFile);
-	}
-#endif
 	return nErr;
 }
 
@@ -416,7 +408,7 @@ int X2Mount::abort(void)
 	}
 #endif
 	X2MutexLocker ml(GetMutex());
-    // nErr = mATCS.Abort();
+    nErr = mATCS.Abort();
     return nErr;
 }
 
@@ -480,6 +472,7 @@ int X2Mount::syncMount(const double& ra, const double& dec)
 bool X2Mount::isSynced(void)
 {
     int nErr;
+    X2MutexLocker ml(GetMutex());
     nErr = mATCS.isSynced(m_bSynced);
 	return m_bSynced;
 }
@@ -515,8 +508,7 @@ int X2Mount::trackingRates(bool& bTrackingOn, double& dRaRateArcSecPerSec, doubl
 //NeedsRefractionInterface
 bool X2Mount::needsRefactionAdjustments(void)
 {
-	return true;
-	
+	return true;	
 }
 
 /* Parking Interface */
@@ -590,20 +582,7 @@ int X2Mount::isCompletePark(bool& bComplete) const
 }
 int X2Mount::endPark(void)
 {
-	int err;
-	X2MutexLocker ml(GetMutex());
-#ifdef ATCS_X2_DEBUG
-	if (LogFile) {
-		time_t ltime = time(NULL);
-		char *timestamp = asctime(localtime(&ltime));
-		timestamp[strlen(timestamp) - 1] = 0;
-		fprintf(LogFile, "[%s] endPark Called\n", timestamp);
-        fflush(LogFile);
-	}
-#endif
-	err = setTrackingRates(false, true, 0.0, 0.0); if (err) return err;
-	m_bParked = true;
-	return err;
+    return SB_OK;
 }
 
 int		X2Mount::startUnpark(void)
@@ -613,14 +592,16 @@ int		X2Mount::startUnpark(void)
 /*!Called to monitor the unpark process.  \param bComplete Set to true if the unpark is complete, otherwise set to false.*/
 int X2Mount::isCompleteUnpark(bool& bComplete) const
 {
+    X2Mount* pMe = (X2Mount*)this;
+
 	bComplete = true;
+    pMe->m_bParked = false;
 	return SB_OK;
 }
 
 /*!Called once the unpark is complete.	This is called once for every corresponding startUnpark() allowing software implementations of unpark.*/
 int		X2Mount::endUnpark(void)
 {
-	m_bParked = false;
 	return SB_OK;
 }
 

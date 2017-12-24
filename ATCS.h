@@ -11,6 +11,12 @@
 #include <unistd.h>
 #endif
 
+// C++ includes
+#include <string>
+#include <vector>
+#include <sstream>
+#include <iostream>
+
 #include "../../licensedinterfaces/sberrorx.h"
 #include "../../licensedinterfaces/theskyxfacadefordriversinterface.h"
 #include "../../licensedinterfaces/sleeperinterface.h"
@@ -37,11 +43,12 @@ enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPO
 #define SERIAL_BUFFER_SIZE 256
 #define MAX_TIMEOUT 5000
 #define ATCS_LOG_BUFFER_SIZE 256
+#define ERR_PARSE   1
 
 /// ATCL response code
 #define ATCL_ACK    0x8F
 #define ATCL_NACK    0xA5
-
+#define ATCS_NB_SLEW_SPEEDS 5
 
 // Define Class for ATCS
 class ATCS
@@ -59,12 +66,19 @@ public:
     void    setTSX(TheSkyXFacadeForDriversInterface *pTSX) { m_pTsx = pTSX;};
     void    setSleeper(SleeperInterface *pSleeper) { m_pSleeper = pSleeper;};
 
+    int getNbSlewSpeed();
+    void getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize);
+    
     int getFirmwareVersion(char *version, int strMaxLen);
     int getModel(char *model, int strMaxLen);
 
     int getRaAndDec(double &dRa, double &dDec);
     int syncTo(double dRa, double dDec);
     int isSynced(bool bSyncked);
+
+    int unPark();
+    
+    int Abort();
 
 private:
 
@@ -90,7 +104,17 @@ private:
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen);
     int     ATCSreadResponse(unsigned char *pszRespBuffer, int bufferLen);
 
+    int     setTarget(double dRa, double dDec);
+
     int     setAsyncUpdateEnabled(bool bEnable);
+
+    void    convertDecDegToDDMMSS(double dDeg, char *szResult, int size);
+    int     convertDDMMSSToDecDeg(char *szStrDeg, double &dDecDeg);
+    
+    void    convertRaToHHMMSSt(double dRa, char *szResult, int size);
+    int     convertHHMMSStToRa(char *szStrRa, double &dRa);
+
+    int     parseFields(char *pszResp, std::vector<std::string> &svFields, char cSeparator);
 
 #ifdef ATCS_DEBUG
 	// timestamp for logs
@@ -100,4 +124,5 @@ private:
 #endif
 	
 };
+
 
