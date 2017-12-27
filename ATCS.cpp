@@ -61,6 +61,12 @@ int ATCS::Connect(char *pszPort)
     setAsyncUpdateEnabled(false);
     m_bJNOW = true;
     setEpochOfEntry("Now");
+
+    // do we need to set the location Long. Lat. ?
+    // do we need to set the timezone ?
+    // do we need to set the time ?
+    // read park location
+    
     return SB_OK;
 }
 

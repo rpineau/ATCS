@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>466</width>
-    <height>444</height>
+    <width>461</width>
+    <height>439</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -33,14 +33,20 @@
      </property>
      <property name="minimumSize">
       <size>
-       <width>440</width>
-       <height>420</height>
+       <width>0</width>
+       <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>426</width>
-       <height>420</height>
+       <width>9999</width>
+       <height>9999</height>
+      </size>
+     </property>
+     <property name="sizeIncrement">
+      <size>
+       <width>56</width>
+       <height>0</height>
       </size>
      </property>
      <property name="frameShape">
@@ -49,23 +55,6 @@
      <property name="frameShadow">
       <enum>QFrame::Raised</enum>
      </property>
-     <widget class="QWidget" name="widget_5" native="true">
-      <property name="geometry">
-       <rect>
-        <x>13</x>
-        <y>512</y>
-        <width>24</width>
-        <height>24</height>
-       </rect>
-      </property>
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <layout class="QHBoxLayout" name="horizontalLayout_6"/>
-     </widget>
      <widget class="QPushButton" name="pushButtonOK">
       <property name="geometry">
        <rect>
@@ -95,9 +84,9 @@
      <widget class="QWidget" name="layoutWidget">
       <property name="geometry">
        <rect>
-        <x>80</x>
+        <x>70</x>
         <y>0</y>
-        <width>281</width>
+        <width>280</width>
         <height>145</height>
        </rect>
       </property>
@@ -133,11 +122,11 @@
         <x>20</x>
         <y>150</y>
         <width>310</width>
-        <height>111</height>
+        <height>81</height>
        </rect>
       </property>
       <property name="title">
-       <string>Time &amp; location</string>
+       <string>Time and Location</string>
       </property>
       <widget class="QCheckBox" name="checkBox">
        <property name="geometry">
@@ -166,12 +155,6 @@
        </property>
       </widget>
      </widget>
-     <zorder>widget_5</zorder>
-     <zorder>pushButtonOK</zorder>
-     <zorder>pushButtonCancel</zorder>
-     <zorder>layoutWidget</zorder>
-     <zorder>label_logo_2</zorder>
-     <zorder>groupBox</zorder>
     </widget>
    </item>
   </layout>
