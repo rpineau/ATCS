@@ -65,10 +65,10 @@ public:
 	int Disconnect();
 	bool isConnected() const { return m_bIsConnected; }
 
-    void    setSerxPointer(SerXInterface *p) { m_pSerx = p; }
-    void    setLogger(LoggerInterface *pLogger) { m_pLogger = pLogger; };
-    void    setTSX(TheSkyXFacadeForDriversInterface *pTSX) { m_pTsx = pTSX;};
-    void    setSleeper(SleeperInterface *pSleeper) { m_pSleeper = pSleeper;};
+    void setSerxPointer(SerXInterface *p) { m_pSerx = p; }
+    void setLogger(LoggerInterface *pLogger) { m_pLogger = pLogger; };
+    void setTSX(TheSkyXFacadeForDriversInterface *pTSX) { m_pTsx = pTSX;};
+    void setSleeper(SleeperInterface *pSleeper) { m_pSleeper = pSleeper;};
 
     int getNbSlewRates();
     int getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize);
@@ -78,10 +78,13 @@ public:
 
     int getRaAndDec(double &dRa, double &dDec);
     int syncTo(double dRa, double dDec);
-    int isSynced(bool bSyncked);
+    int isSynced(bool &bSyncked);
 
+    int gotoPark(double dRa, double dDEc);
     int unPark();
-    
+    int getAtPark(bool &bParked);
+
+
     int Abort();
 
 private:
@@ -98,23 +101,26 @@ private:
     char    m_szFirmwareVersion[SERIAL_BUFFER_SIZE];
 
     char    m_szHardwareModel[SERIAL_BUFFER_SIZE];
-    char    m_szEpoch[32];
 
 	double  m_dGotoRATarget;						  // Current Target RA;
 	double  m_dGotoDECTarget;                      // Current Goto Target Dec;
 	bool    m_bGotoInProgress;						  // Is GOTO in progress?
 	bool    m_bParkInProgress;						  // Is a park in progress?
 	
+    bool    m_bJNOW;
 
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen);
     int     ATCSreadResponse(unsigned char *pszRespBuffer, int bufferLen);
 
     int     setTarget(double dRa, double dDec);
-
     int     setAsyncUpdateEnabled(bool bEnable);
     int     setEpochOfEntry(const char *szEpoch);
-    int     setAlignFromTargetRA_DecCalcSide();
-    int     setAlignFromTargetRA_DecCalcSideEpochNow();
+    int     alignFromTargetRA_DecCalcSide();
+    int     alignFromTargetRA_DecCalcSideEpochNow();
+    int     alignFromLastPosition();
+
+    int     calFromTargetRA_DecEpochNow();
+    int     calFromTargetRA_Dec();
 
     void    convertDecDegToDDMMSS(double dDeg, char *szResult, int size);
     int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);

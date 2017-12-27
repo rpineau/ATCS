@@ -348,6 +348,9 @@ int X2Mount::raDec(double& ra, double& dec, const bool& bCached)
 	
 	// Get the RA and DEC from the mount
 	nErr = mATCS.getRaAndDec(ra, dec);
+    if(nErr)
+        nErr = ERR_CMDFAILED;
+
 	return nErr;
 }
 
@@ -370,6 +373,9 @@ int X2Mount::abort(void)
 #endif
 
     nErr = mATCS.Abort();
+    if(nErr)
+        nErr = ERR_CMDFAILED;
+
     return nErr;
 }
 
@@ -442,6 +448,8 @@ int X2Mount::syncMount(const double& ra, const double& dec)
 #endif
 
     nErr = mATCS.syncTo(ra, dec);
+    if(nErr)
+        nErr = ERR_CMDFAILED;
 
 	return nErr;
 }
@@ -454,6 +462,9 @@ bool X2Mount::isSynced(void)
 
     X2MutexLocker ml(GetMutex());
     nErr = mATCS.isSynced(m_bSynced);
+    if(nErr)
+        nErr = ERR_CMDFAILED;
+
 	return m_bSynced;
 }
 
@@ -500,7 +511,8 @@ bool X2Mount::needsRefactionAdjustments(void)
 
 /* Parking Interface */
 bool X2Mount::isParked(void) {
-	
+
+    mATCS.getAtPark(m_bParked);
 	return m_bParked;
 }
 
@@ -517,6 +529,7 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
     if (nErr) {
         return nErr;
     }
+
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
 		time_t ltime = time(NULL);
@@ -526,39 +539,18 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
         fflush(LogFile);
 	}
 #endif
-	if (fabs(dDec - 90.0) < 0.1 || fabs (dDec+90) < 0.1) {
-		// nErr = mATCS.StartPark();
-#ifdef ATCS_X2_DEBUG
-		if (LogFile) {
-			time_t ltime = time(NULL);
-			char *timestamp = asctime(localtime(&ltime));
-			timestamp[strlen(timestamp) - 1] = 0;
-			fprintf(LogFile, "[%s] startPark Called SkyW.StartPark() %d\n", timestamp, nErr);
-            fflush(LogFile);
-		}
-#endif
-	}
-	else {
-		// nErr = mATCS.StartSlewTo(dRa, dDec);
-#ifdef ATCS_X2_DEBUG
-		if (LogFile) {
-			time_t ltime = time(NULL);
-			char *timestamp = asctime(localtime(&ltime));
-			timestamp[strlen(timestamp) - 1] = 0;
-			fprintf(LogFile, "[%s] startPark Called SkyW.StartSlewTo Err %d Ra %f Dec %f \n", timestamp, nErr, dRa, dDec);
-            fflush(LogFile);
-		}
-#endif
-	}
-	
+
 	return nErr;
 }
 
 
 int X2Mount::isCompletePark(bool& bComplete) const
 {
+    int nErr = SB_OK;
+
     if(!m_bLinked)
         return ERR_NOLINK;
+    X2Mount* pMe = (X2Mount*)this;
 
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
@@ -569,9 +561,13 @@ int X2Mount::isCompletePark(bool& bComplete) const
         fflush(LogFile);
 	}
 #endif
-	// bComplete = mATCS.GetIsParkingComplete();
-	return SB_OK;
+    nErr = pMe->mATCS.getAtPark(bComplete);
+    if(nErr)
+        nErr = ERR_CMDFAILED;
+
+	return nErr;
 }
+
 int X2Mount::endPark(void)
 {
     return SB_OK;
@@ -584,12 +580,20 @@ int		X2Mount::startUnpark(void)
 /*!Called to monitor the unpark process.  \param bComplete Set to true if the unpark is complete, otherwise set to false.*/
 int X2Mount::isCompleteUnpark(bool& bComplete) const
 {
+    int nErr;
+    bool bIsPArked;
     if(!m_bLinked)
         return ERR_NOLINK;
 
     X2Mount* pMe = (X2Mount*)this;
+    bComplete = true;
+    nErr = pMe->mATCS.getAtPark(bIsPArked);
+    if(nErr)
+        nErr = ERR_CMDFAILED;
 
-	bComplete = true;
+    if(bIsPArked)
+        bComplete = false;
+
     pMe->m_bParked = false;
 	return SB_OK;
 }

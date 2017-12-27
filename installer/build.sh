@@ -3,6 +3,7 @@
 mkdir -p ROOT/tmp/ATCS_X2/
 cp "../ATCS.ui" ROOT/tmp/ATCS_X2/
 cp "../mountlist ATCS.txt" ROOT/tmp/ATCS_X2/
+cp "../Astrometric.png" ROOT/tmp/ATCS_X2/
 cp "../build/Release/libATCS.dylib" ROOT/tmp/ATCS_X2/
 
 if [ ! -z "$installer_signature" ]; then

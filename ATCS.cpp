@@ -9,6 +9,7 @@ ATCS::ATCS()
 	m_bParkInProgress = false;
 
     m_bDebugLog = true;
+    m_bJNOW = false;
 
 #ifdef	ATCS_DEBUG
 	Logfile = fopen(ATCS_LOGFILENAME, "w");
@@ -37,6 +38,7 @@ ATCS::~ATCS(void)
 
 int ATCS::Connect(char *pszPort)
 {
+    bool bIsSynced;
 
 #ifdef ATCS_DEBUG
 	ltime = time(NULL);
@@ -57,8 +59,8 @@ int ATCS::Connect(char *pszPort)
 
     // disable any async message from the controller
     setAsyncUpdateEnabled(false);
-    snprintf(m_szEpoch, 32, "Now");
-    setEpochOfEntry(m_szEpoch);
+    m_bJNOW = true;
+    setEpochOfEntry("Now");
     return SB_OK;
 }
 
@@ -306,14 +308,6 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
         return nErr;
     }
 
-#ifdef ATCS_DEBUG
-    ltime = time(NULL);
-    timestamp = asctime(localtime(&ltime));
-    timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::getRaAndDec] WTF !!\n", timestamp);
-    fflush(Logfile);
-#endif
-
     nErr = convertHHMMSStToRa(szResp, dRa);
     if(nErr)
         return nErr;
@@ -369,32 +363,51 @@ int ATCS::setTarget(double dRa, double dDec)
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStd%s;", szTemp);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
-
     return nErr;
 }
 
 int ATCS::syncTo(double dRa, double dDec)
 {
     int nErr = ATCS_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    bool bAligned;
 
+    nErr = isSynced(bAligned);
+    if(nErr)
+        return nErr;
+
+    // set sync target coordinate
     nErr = setTarget(dRa, dDec);
     if(nErr)
         return nErr;
+
     // Sync
+    if(!bAligned){
+        nErr = alignFromTargetRA_DecCalcSideEpochNow();
+    }
+    else {
+        nErr = calFromTargetRA_DecEpochNow();
+    }
+    return nErr;
+}
+
+int ATCS::calFromTargetRA_DecEpochNow()
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
     nErr = ATCSSendCommand("!ACrn;", szResp, SERIAL_BUFFER_SIZE);
     return nErr;
 }
 
-int ATCS::unPark()
+int ATCS::calFromTargetRA_Dec()
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
-    nErr = ATCSSendCommand("!AFlp;", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!ACrd;", szResp, SERIAL_BUFFER_SIZE);
     return nErr;
 }
 
-int ATCS::isSynced(bool bSyncked)
+
+int ATCS::isSynced(bool &bSyncked)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -414,6 +427,36 @@ int ATCS::isSynced(bool bSyncked)
 
     return nErr;
 }
+
+int ATCS::gotoPark(double dRa, double dDEc)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    return nErr;
+}
+
+
+int ATCS::getAtPark(bool &bParked)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    bParked = false;
+    nErr = ATCSSendCommand("!AGak;", szResp, SERIAL_BUFFER_SIZE);
+    if(strncmp(szResp,"Yes",SERIAL_BUFFER_SIZE) == 0) {
+        bParked = true;
+    }
+    return nErr;
+}
+
+int ATCS::unPark()
+{
+    int nErr = ATCS_OK;
+    nErr = alignFromLastPosition();
+    return nErr;
+}
+
 
 int ATCS::Abort()
 {
@@ -457,7 +500,7 @@ int ATCS::setEpochOfEntry(const char *szEpoch)
     return nErr;
 }
 
-int ATCS::setAlignFromTargetRA_DecCalcSide()
+int ATCS::alignFromTargetRA_DecCalcSide()
 {
     int nErr;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -467,7 +510,7 @@ int ATCS::setAlignFromTargetRA_DecCalcSide()
     return nErr;
 }
 
-int ATCS::setAlignFromTargetRA_DecCalcSideEpochNow()
+int ATCS::alignFromTargetRA_DecCalcSideEpochNow()
 {
     int nErr;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -477,6 +520,15 @@ int ATCS::setAlignFromTargetRA_DecCalcSideEpochNow()
     return nErr;
 }
 
+int ATCS::alignFromLastPosition()
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!AFlp;", szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
 
 void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, int size)
 {
