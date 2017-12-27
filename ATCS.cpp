@@ -10,6 +10,7 @@ ATCS::ATCS()
 
     m_bDebugLog = true;
     m_bJNOW = false;
+    m_bAligned = false;
 
 #ifdef	ATCS_DEBUG
 	Logfile = fopen(ATCS_LOGFILENAME, "w");
@@ -38,7 +39,6 @@ ATCS::~ATCS(void)
 
 int ATCS::Connect(char *pszPort)
 {
-    bool bIsSynced;
 
 #ifdef ATCS_DEBUG
 	ltime = time(NULL);
@@ -56,6 +56,9 @@ int ATCS::Connect(char *pszPort)
 
     if(!m_bIsConnected)
         return ERR_COMMNOLINK;
+
+    atclEnter();
+    disablePacketSeqChecking();
 
     // disable any async message from the controller
     setAsyncUpdateEnabled(false);
@@ -243,6 +246,21 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, int nBufferLen)
     return nErr;
 }
 
+int ATCS::atclEnter()
+{
+    int nErr = ATCS_OK;
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    unsigned long ulBytesWrite;
+
+    snprintf(szCmd,SERIAL_BUFFER_SIZE, "%c", ATCL_ENTER);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+
 #pragma mark - dome controller informations
 
 int ATCS::getFirmwareVersion(char *pszVersion, int nStrMaxLen)
@@ -418,6 +436,11 @@ int ATCS::isSynced(bool &bSyncked)
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
+    if(m_bAligned) {
+        bSyncked = m_bAligned;
+        return nErr;
+    }
+
     nErr = ATCSSendCommand("!AGas;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
@@ -431,6 +454,7 @@ int ATCS::isSynced(bool &bSyncked)
     else
         bSyncked = false;
 
+    m_bAligned = bSyncked;
     return nErr;
 }
 
@@ -474,6 +498,15 @@ int ATCS::Abort()
 }
 
 #pragma mark - Special commands & functions
+int ATCS::disablePacketSeqChecking()
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!QDps;", szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
 
 int ATCS::setAsyncUpdateEnabled(bool bEnable)
 {

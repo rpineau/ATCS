@@ -119,39 +119,84 @@
      <widget class="QGroupBox" name="groupBox">
       <property name="geometry">
        <rect>
-        <x>20</x>
+        <x>19</x>
         <y>150</y>
-        <width>310</width>
-        <height>81</height>
+        <width>371</width>
+        <height>110</height>
        </rect>
       </property>
       <property name="title">
        <string>Time and Location</string>
       </property>
-      <widget class="QCheckBox" name="checkBox">
+      <widget class="QPushButton" name="pushButton">
        <property name="geometry">
         <rect>
-         <x>20</x>
-         <y>30</y>
-         <width>270</width>
-         <height>18</height>
+         <x>280</x>
+         <y>40</y>
+         <width>70</width>
+         <height>20</height>
         </rect>
        </property>
        <property name="text">
-        <string>Sync location from TheSkyX Pro</string>
+        <string>Apply</string>
        </property>
       </widget>
-      <widget class="QCheckBox" name="checkBox_2">
+      <widget class="QLabel" name="label">
        <property name="geometry">
         <rect>
-         <x>20</x>
-         <y>50</y>
-         <width>280</width>
-         <height>18</height>
+         <x>70</x>
+         <y>30</y>
+         <width>200</width>
+         <height>40</height>
         </rect>
        </property>
        <property name="text">
-        <string>Sync time and timezone from TheSyX Pro</string>
+        <string>Sync location from TheSkyX Pro :</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_2">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>60</y>
+         <width>260</width>
+         <height>40</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Sync time and timezone from TheSyX Pro :</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_2">
+       <property name="geometry">
+        <rect>
+         <x>280</x>
+         <y>70</y>
+         <width>70</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Apply</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_3">
+       <property name="geometry">
+        <rect>
+         <x>80</x>
+         <y>20</y>
+         <width>220</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ff0000;&quot;&gt;These  syncs  will void Alignement.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
      </widget>

@@ -46,8 +46,9 @@ enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPO
 #define ERR_PARSE   1
 
 /// ATCL response code
+#define ATCL_ENTER  0xB1
 #define ATCL_ACK    0x8F
-#define ATCL_NACK    0xA5
+#define ATCL_NACK   0xA5
 #define ATCS_NB_SLEW_SPEEDS 5
 #define ATCS_SLEW_NAME_LENGHT 12
 
@@ -108,9 +109,12 @@ private:
 	bool    m_bParkInProgress;						  // Is a park in progress?
 	
     bool    m_bJNOW;
+    bool    m_bAligned;
 
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen);
     int     ATCSreadResponse(unsigned char *pszRespBuffer, int bufferLen);
+    int     atclEnter();
+    int     disablePacketSeqChecking();
 
     int     setTarget(double dRa, double dDec);
     int     setAsyncUpdateEnabled(bool bEnable);

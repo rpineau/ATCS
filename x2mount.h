@@ -86,9 +86,7 @@ class X2Mount : public MountDriverInterface
 						,public SlewToInterface
                         ,public AsymmetricalEquatorialInterface
 						,public OpenLoopMoveInterface
-						// ,public NeedsRefractionInterface    // Already inherited.
-						// ,public LinkFromUIThreadInterface,
-						,public TrackingRatesInterface 
+						,public TrackingRatesInterface
 						,public ParkInterface
 						,public UnparkInterface
 						,public ModalSettingsDialogInterface, public X2GUIEventInterface
@@ -158,8 +156,10 @@ public:
 	virtual int								endSlewTo(void)										;
 	
 	//AsymmetricalEquatorialInterface
-	virtual bool knowsBeyondThePole() { return true; }
+    virtual bool knowsBeyondThePole();
 	virtual int beyondThePole(bool& bYes);
+    virtual double flipHourAngle();
+    virtual int gemLimits(double& dHoursEast, double& dHoursWest);
 
 	// Leave the following functions as virtual since we don't use them - the defaults are fine.
 	// virtual double flipHourAngle();
@@ -175,13 +175,12 @@ public:
 	
 	//NeedsRefractionInterface
 	virtual bool							needsRefactionAdjustments(void);
-	
-	//LinkFromUIThreadInterface
-	
-	//TrackingRatesInterface
+
+    //TrackingRatesInterface
 	virtual int setTrackingRates( const bool& bTrackingOn, const bool& bIgnoreRates, const double& dRaRateArcSecPerSec, const double& dDecRateArcSecPerSec);
 	virtual int trackingRates( bool& bTrackingOn, double& dRaRateArcSecPerSec, double& dDecRateArcSecPerSec);
-	
+    virtual int siderealTrackingOn();
+
 	/* Parking Interface */
 	virtual bool							isParked(void);
 	virtual int								startPark(const double& dAz, const double& dAlt);

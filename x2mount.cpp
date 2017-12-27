@@ -105,7 +105,8 @@ int X2Mount::queryAbstraction(const char* pszName, void** ppVal)
 	return SB_OK;
 }
 
-//OpenLoopMoveInterface
+#pragma mark - OpenLoopMoveInterface
+
 int X2Mount::startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const int& nRateIndex)
 {
     if(!m_bLinked)
@@ -235,7 +236,7 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 	return;
 }
 
-//LinkInterface
+#pragma mark - LinkInterface
 int X2Mount::establishLink(void)
 {
     int nErr;
@@ -278,7 +279,7 @@ bool X2Mount::isEstablishLinkAbortable(void) const
     return false;
 }
 
-//AbstractDriverInfo
+#pragma mark - AbstractDriverInfo
 
 void	X2Mount::driverInfoDetailedInfo(BasicStringInterface& str) const
 {
@@ -290,7 +291,6 @@ double	X2Mount::driverInfoVersion(void) const
 	return DRIVER_VERSION;
 }
 
-//AbstractDeviceInfo
 void X2Mount::deviceInfoNameShort(BasicStringInterface& str) const
 {
     if(m_bLinked) {
@@ -301,7 +301,7 @@ void X2Mount::deviceInfoNameShort(BasicStringInterface& str) const
         str = cModel;
     }
     else
-        str = "Not connected";
+        str = "Not connected1";
 }
 void X2Mount::deviceInfoNameLong(BasicStringInterface& str) const
 {
@@ -333,10 +333,10 @@ void X2Mount::deviceInfoModel(BasicStringInterface& str)
         str = cModel;
     }
     else
-        str = "Not connected";
+        str = "Not connected2";
 }
 
-//Common Mount specifics
+#pragma mark - Common Mount specifics
 int X2Mount::raDec(double& ra, double& dec, const bool& bCached)
 {
 	int nErr = 0;
@@ -468,6 +468,7 @@ bool X2Mount::isSynced(void)
 	return m_bSynced;
 }
 
+#pragma mark - TrackingRatesInterface
 int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates, const double& dRaRateArcSecPerSec, const double& dDecRateArcSecPerSec)
 {
     int nErr = SB_OK;
@@ -503,17 +504,34 @@ int X2Mount::trackingRates(bool& bTrackingOn, double& dRaRateArcSecPerSec, doubl
 	return SB_OK;
 }
 
-//NeedsRefractionInterface
-bool X2Mount::needsRefactionAdjustments(void)
+int X2Mount::siderealTrackingOn()
 {
-	return true;	
+    int nErr;
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
+    nErr = setTrackingRates( true, true, 0.0, 0.0);
+    return nErr;
 }
 
-/* Parking Interface */
+#pragma mark - NeedsRefractionInterface
+bool X2Mount::needsRefactionAdjustments(void)
+{
+    // need to check if ATCS refraction adjustment is on.
+    return true;
+}
+
+#pragma mark - Parking Interface
 bool X2Mount::isParked(void) {
 
+    if(!m_bLinked)
+        return false;
+
+    X2MutexLocker ml(GetMutex());
     mATCS.getAtPark(m_bParked);
-	return m_bParked;
+
+    return m_bParked;
 }
 
 int X2Mount::startPark(const double& dAz, const double& dAlt)
@@ -551,6 +569,7 @@ int X2Mount::isCompletePark(bool& bComplete) const
     if(!m_bLinked)
         return ERR_NOLINK;
     X2Mount* pMe = (X2Mount*)this;
+    X2MutexLocker ml(pMe ->GetMutex());
 
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
@@ -586,6 +605,8 @@ int X2Mount::isCompleteUnpark(bool& bComplete) const
         return ERR_NOLINK;
 
     X2Mount* pMe = (X2Mount*)this;
+    X2MutexLocker ml(pMe ->GetMutex());
+
     bComplete = true;
     nErr = pMe->mATCS.getAtPark(bIsPArked);
     if(nErr)
@@ -604,15 +625,19 @@ int		X2Mount::endUnpark(void)
 	return SB_OK;
 }
 
+#pragma mark - AsymmetricalEquatorialInterface
+
+bool X2Mount::knowsBeyondThePole()
+{
+    return true;
+}
+
 int X2Mount::beyondThePole(bool& bYes) {
 	// bYes = mATCS.GetIsBeyondThePole();
 	return SB_OK;
 }
 
 
-// Leave the two functions below as virtual functions since we're not setting them explicitly
-
-/* 
 double X2Mount::flipHourAngle() {
 #ifdef ATCS_X2_DEBUG
 	if (LogFile) {
@@ -642,11 +667,8 @@ int X2Mount::gemLimits(double& dHoursEast, double& dHoursWest)
 	dHoursWest = 0.0;
 	return SB_OK;
 }
-*/
 
-//
-// SerialPortParams2Interface
-//
+
 #pragma mark - SerialPortParams2Interface
 
 void X2Mount::portName(BasicStringInterface& str) const
