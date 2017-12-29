@@ -77,8 +77,8 @@ int ATCS::Connect(char *pszPort)
     nErr = getDateFormat(m_bDdMmYy);
 
     // debug
-    getStandardTime();
-    getStandardDate();
+    getStandardTime(m_szTime, SERIAL_BUFFER_SIZE);
+    getStandardDate(m_szDate, SERIAL_BUFFER_SIZE);
 
     if(!m_bTimeSetOnce) {
         nErr = syncTime();
@@ -271,8 +271,6 @@ int ATCS::atclEnter()
     int nErr = ATCS_OK;
     char szCmd[SERIAL_BUFFER_SIZE];
     char szResp[SERIAL_BUFFER_SIZE];
-
-    unsigned long ulBytesWrite;
 
     snprintf(szCmd,SERIAL_BUFFER_SIZE, "%c", ATCL_ENTER);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
@@ -545,7 +543,7 @@ int ATCS::syncTime()
 
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSst%s;", szTemp);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
-    getStandardTime();
+    getStandardTime(m_szTime, SERIAL_BUFFER_SIZE);
     m_bAligned = false; // changing time void alignement
 
     return nErr;
@@ -577,7 +575,7 @@ int ATCS::syncDate()
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSsd%s;", szTemp);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
-    getStandardDate();
+    getStandardDate(m_szDate, SERIAL_BUFFER_SIZE);
     m_bAligned = false; // changing date void alignement
     return nErr;
 }
@@ -637,23 +635,27 @@ int ATCS::getDateFormat(bool &bDdMmYy )
     return nErr;
 }
 
-int ATCS::getStandardTime()
+int ATCS::getStandardTime(char *szTime, int nMaxLen)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!TGst;", szResp, SERIAL_BUFFER_SIZE);
-
+    if(nErr)
+        return nErr;
+    strncpy(szTime, szResp, nMaxLen);
     return nErr;
 }
 
-int ATCS::getStandardDate()
+int ATCS::getStandardDate(char *szDate, int nMaxLen)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!TGsd;", szResp, SERIAL_BUFFER_SIZE);
-
+    if(nErr)
+        return nErr;
+    strncpy(szDate, szResp, nMaxLen);
     return nErr;
 }
 

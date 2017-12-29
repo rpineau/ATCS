@@ -179,7 +179,10 @@ int X2Mount::execModalSettingsDialog(void)
 	X2GUIExchangeInterface*			dx = NULL;//Comes after ui is loaded
 	bool bPressedOK = false;
 	int i;
-	
+    char szTmpBuf[SERIAL_BUFFER_SIZE];
+    char szTime[SERIAL_BUFFER_SIZE];
+    char szDate[SERIAL_BUFFER_SIZE];
+
 #ifdef ATCS_X2_DEBUG
 	time_t ltime;
 	char *timestamp;
@@ -200,9 +203,29 @@ int X2Mount::execModalSettingsDialog(void)
 	if (NULL == (dx = uiutil.X2DX())) {
 		return ERR_POINTER;
 	}
-	
-	// Set values in the userinterface
 
+    X2MutexLocker ml(GetMutex());
+
+	// Set values in the userinterface
+    if(m_bLinked) {
+        mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
+        mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+#ifdef ATCS_X2_DEBUG
+        time_t ltime;
+        char *timestamp;
+        if (LogFile) {
+            ltime = time(NULL);
+            timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] execModelSettingsDialog szTime : %s\n", timestamp, szTime);
+            fprintf(LogFile, "[%s] execModelSettingsDialog szDate : %s\n", timestamp, szDate);
+            fflush(LogFile);
+        }
+#endif
+
+        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s %s",szTime, szDate);
+        dx->setPropertyString("time_date", "text", szTmpBuf);
+    }
 	//Display the user interface
 	if ((nErr = ui->exec(bPressedOK)))
 		return nErr;
@@ -216,6 +239,9 @@ int X2Mount::execModalSettingsDialog(void)
 
 void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 {
+    char szTmpBuf[SERIAL_BUFFER_SIZE];
+    char szTime[SERIAL_BUFFER_SIZE];
+    char szDate[SERIAL_BUFFER_SIZE];
 
 	X2MutexLocker ml(GetMutex());
 	
@@ -231,6 +257,10 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 	}
 #endif
 	if (!strcmp(pszEvent, "on_timer")) {
+        mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
+        mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s %s",szTime, szDate);
+        uiex->setPropertyString("time_date", "text", szTmpBuf);
 	}
 
     if (!strcmp(pszEvent, "on_pushButton_clicked")) {
@@ -240,6 +270,10 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
     if (!strcmp(pszEvent, "on_pushButton_2_clicked")) {
         mATCS.syncTime();
         mATCS.syncDate();
+        mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
+        mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s %s",szTime, szDate);
+        uiex->setPropertyString("time_date", "text", szTmpBuf);
     }
 
 	return;
@@ -709,6 +743,7 @@ void X2Mount::portNameOnToCharPtr(char* pszPort, const int& nMaxSize) const
         m_pIniUtil->readString(PARENT_KEY, CHILD_KEY_PORT_NAME, pszPort, pszPort, nMaxSize);
 
 }
+
 
 
 

@@ -122,7 +122,7 @@
         <x>19</x>
         <y>150</y>
         <width>410</width>
-        <height>110</height>
+        <height>180</height>
        </rect>
       </property>
       <property name="title">
@@ -197,6 +197,32 @@
        </property>
        <property name="text">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ff0000;&quot;&gt;These  syncs  will void Alignement.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_4">
+       <property name="geometry">
+        <rect>
+         <x>30</x>
+         <y>110</y>
+         <width>130</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>ATCS time and date :</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="time_date">
+       <property name="geometry">
+        <rect>
+         <x>170</x>
+         <y>110</y>
+         <width>130</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>hh:mm:ss.t dd/mm/yy</string>
        </property>
       </widget>
      </widget>

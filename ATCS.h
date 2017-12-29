@@ -88,6 +88,10 @@ public:
 
     int Abort();
 
+    int getLocalTimeFormat(bool &b24h);
+    int getDateFormat(bool &bDdMmYy);
+    int getStandardTime(char *szTime, int nMaxLen);
+    int getStandardDate(char *szDate, int nMaxLen);
     int syncTime();
     int syncDate();
 
@@ -105,6 +109,8 @@ private:
     char    m_szFirmwareVersion[SERIAL_BUFFER_SIZE];
 
     char    m_szHardwareModel[SERIAL_BUFFER_SIZE];
+    char    m_szTime[SERIAL_BUFFER_SIZE];
+    char    m_szDate[SERIAL_BUFFER_SIZE];
 
 	double  m_dGotoRATarget;						  // Current Target RA;
 	double  m_dGotoDECTarget;                      // Current Goto Target Dec;
@@ -123,10 +129,6 @@ private:
     int     atclEnter();
     int     disablePacketSeqChecking();
     int     checkSiteTimeDateSetOnce(bool &bSet);
-    int     getLocalTimeFormat(bool &b24h);
-    int     getDateFormat(bool &bDdMmYy);
-    int     getStandardTime();
-    int     getStandardDate();
 
     int     setTarget(double dRa, double dDec);
     int     setAsyncUpdateEnabled(bool bEnable);
