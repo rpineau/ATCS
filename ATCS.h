@@ -22,6 +22,8 @@
 #include "../../licensedinterfaces/sleeperinterface.h"
 #include "../../licensedinterfaces/serxinterface.h"
 #include "../../licensedinterfaces/loggerinterface.h"
+#include "../../licensedinterfaces/mountdriverinterface.h"
+
 
 #define ATCS_DEBUG 1   // define this to have log files
 
@@ -84,6 +86,10 @@ public:
 
     int startSlewTo(double dRa, double dDec);
     int isSlewToComplete(bool &bComplete);
+
+    int startOpenSlew(const MountDriverInterface::MoveDir Dir, int nRate);
+    int stopOpenLoopMove();
+
     int slewToPark(double dRa, double dDEc);
     int unPark();
     int getAtPark(bool &bParked);
@@ -126,7 +132,7 @@ private:
     bool    m_b24h;
     bool    m_bDdMmYy;
     bool    m_bTimeSetOnce;
-
+    MountDriverInterface::MoveDir      m_nOpenLoopDir;
 
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen);
     int     ATCSreadResponse(unsigned char *pszRespBuffer, int bufferLen);
@@ -153,7 +159,7 @@ private:
 
     int     parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator);
 
-    const char m_aszSlewRateNames[ATCS_NB_SLEW_SPEEDS][ATCS_SLEW_NAME_LENGHT] = { "Slew", "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4"};
+    const char m_aszSlewRateNames[ATCS_NB_SLEW_SPEEDS][ATCS_SLEW_NAME_LENGHT] = { "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4",  "Slew"};
 
 #ifdef ATCS_DEBUG
 	// timestamp for logs

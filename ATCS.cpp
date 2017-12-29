@@ -508,6 +508,63 @@ int ATCS::slewTargetRA_DecEpochNow()
 
 }
 
+int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, int nRate)
+{
+    int nErr = ATCS_OK;
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    m_nOpenLoopDir = Dir;
+
+    // select rate
+    if(nRate == 4) { // "Slew"
+        nErr = ATCSSendCommand("!KSsl;", szResp, SERIAL_BUFFER_SIZE);
+    }
+    else {
+        // clear slew
+        nErr = ATCSSendCommand("!KCsl;", szResp, SERIAL_BUFFER_SIZE);
+        // select rate
+        // KScv + 1,2 3 or 4 for ViewVel 1,2,3,4, ViewVel 1 is index 0 so nRate+1
+        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!KScv%d;", nRate+1);
+    }
+    // figure out direction
+    switch(Dir){
+        case MountDriverInterface::MD_NORTH:
+            nErr = ATCSSendCommand("!KSpu;", szResp, SERIAL_BUFFER_SIZE);
+            break;
+        case MountDriverInterface::MD_SOUTH:
+            nErr = ATCSSendCommand("!KSpd;", szResp, SERIAL_BUFFER_SIZE);
+            break;
+        case MountDriverInterface::MD_EAST:
+            nErr = ATCSSendCommand("!KSpl;", szResp, SERIAL_BUFFER_SIZE);
+            break;
+        case MountDriverInterface::MD_WEST:
+            nErr = ATCSSendCommand("!KSsr;", szResp, SERIAL_BUFFER_SIZE);
+            break;
+    }
+
+    return nErr;
+}
+
+int ATCS::stopOpenLoopMove()
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    switch(m_nOpenLoopDir){
+        case MountDriverInterface::MD_NORTH:
+        case MountDriverInterface::MD_SOUTH:
+            nErr = ATCSSendCommand("!XXud;", szResp, SERIAL_BUFFER_SIZE);
+            break;
+        case MountDriverInterface::MD_EAST:
+        case MountDriverInterface::MD_WEST:
+            nErr = ATCSSendCommand("!XXlr;", szResp, SERIAL_BUFFER_SIZE);
+            break;
+    }
+
+    return nErr;
+}
+
 int ATCS::isSlewToComplete(bool &bComplete)
 {
     int nErr = ATCS_OK;

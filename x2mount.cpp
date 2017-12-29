@@ -35,6 +35,7 @@ X2Mount::X2Mount(const char* pszDriverSelection,
     mATCS.setSleeper(m_pSleeper);
     mATCS.setLogger(m_pLogger);
 
+    m_CurrentRateIndex = 0;
 
 	// Read the current stored values for the settings
 	if (m_pIniUtil)
@@ -109,6 +110,7 @@ int X2Mount::queryAbstraction(const char* pszName, void** ppVal)
 
 int X2Mount::startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const int& nRateIndex)
 {
+    int nErr = SB_OK;
     if(!m_bLinked)
         return ERR_NOLINK;
 
@@ -124,9 +126,10 @@ int X2Mount::startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const i
         fflush(LogFile);
 	}
 #endif
-    // mATCS.StartOpenSlew(Dir, SlewSpeeds[nRateIndex]);
-    // do stuff
 
+    nErr = mATCS.startOpenSlew(Dir, nRateIndex);
+    if(nErr)
+        return ERR_CMDFAILED;
     return SB_OK;
 }
 
@@ -147,7 +150,11 @@ int X2Mount::endOpenLoopMove(void)
         fflush(LogFile);
 	}
 #endif
-    // do stuff
+
+    nErr = mATCS.stopOpenLoopMove();
+    if(nErr)
+        return ERR_CMDFAILED;
+
     return nErr;
 }
 
@@ -159,9 +166,12 @@ int X2Mount::rateCountOpenLoopMove(void) const
 
 int X2Mount::rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* pszOut, const int& nOutMaxSize)
 {
-    mATCS.getRateName(nZeroBasedIndex, pszOut, nOutMaxSize);
+    int nErr = SB_OK;
+    nErr = mATCS.getRateName(nZeroBasedIndex, pszOut, nOutMaxSize);
+    if(nErr)
+        return ERR_CMDFAILED;
 
-    return SB_OK;
+    return nErr;
 }
 
 int X2Mount::rateIndexOpenLoopMove(void)
@@ -431,6 +441,9 @@ int X2Mount::startSlewTo(const double& dRa, const double& dDec)
 #endif
 
     nErr = mATCS.startSlewTo(dRa, dDec);
+    if(nErr)
+        return ERR_CMDFAILED;
+
 	return nErr;
 }
 
@@ -444,14 +457,14 @@ int X2Mount::isCompleteSlewTo(bool& bComplete) const
     X2MutexLocker ml(pMe->GetMutex());
 
     nErr = pMe->mATCS.isSlewToComplete(bComplete);
-	
+    if(nErr)
+        return ERR_CMDFAILED;
+
 	return nErr;
 }
 
 int X2Mount::endSlewTo(void)
 {
-    if(!m_bLinked)
-        return ERR_NOLINK;
     return SB_OK;
 }
 
@@ -484,16 +497,13 @@ int X2Mount::syncMount(const double& ra, const double& dec)
 
 bool X2Mount::isSynced(void)
 {
-    int nErr;
     if(!m_bLinked)
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
-    nErr = mATCS.isSynced(m_bSynced);
-    if(nErr)
-        nErr = ERR_CMDFAILED;
+    mATCS.isSynced(m_bSynced);
 
-	return m_bSynced;
+    return m_bSynced;
 }
 
 #pragma mark - TrackingRatesInterface
@@ -515,6 +525,9 @@ int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates,
 	}
 #endif
     // nErr = mATCS.SetTrackingRates(bTrackingOn, bIgnoreRates, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
+    if(nErr)
+        return ERR_CMDFAILED;
+
     return nErr;
 	
 }
@@ -539,7 +552,9 @@ int X2Mount::siderealTrackingOn()
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
-    nErr = setTrackingRates( true, true, 0.0, 0.0);
+    // nErr = setTrackRate("Sidereal");
+    if(nErr)
+        return ERR_CMDFAILED;
     return nErr;
 }
 
@@ -585,6 +600,9 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
         fflush(LogFile);
 	}
 #endif
+    // goto park
+    if(nErr)
+        return ERR_CMDFAILED;
 
 	return nErr;
 }
