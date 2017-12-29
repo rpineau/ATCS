@@ -12,6 +12,11 @@ ATCS::ATCS()
     m_bJNOW = false;
     m_bAligned = false;
 
+    m_b24h = false;
+    m_bDdMmYy = false;
+    m_bTimeSetOnce = false;
+
+
 #ifdef	ATCS_DEBUG
 	Logfile = fopen(ATCS_LOGFILENAME, "w");
 	ltime = time(NULL);
@@ -39,6 +44,7 @@ ATCS::~ATCS(void)
 
 int ATCS::Connect(char *pszPort)
 {
+    int nErr = ATCS_OK;
 
 #ifdef ATCS_DEBUG
 	ltime = time(NULL);
@@ -65,9 +71,23 @@ int ATCS::Connect(char *pszPort)
     m_bJNOW = true;
     setEpochOfEntry("Now");
 
-    // do we need to set the location Long. Lat. ?
-    // do we need to set the timezone ?
     // do we need to set the time ?
+    nErr = checkSiteTimeDateSetOnce(m_bTimeSetOnce);
+    nErr = getLocalTimeFormat(m_b24h);
+    nErr = getDateFormat(m_bDdMmYy);
+
+    // debug
+    getStandardTime();
+    getStandardDate();
+
+    if(!m_bTimeSetOnce) {
+        nErr = syncTime();
+        nErr = syncDate();
+    }
+
+    // do we need to set the location Long. Lat. ?
+    // 
+    // do we need to set the timezone ?
     // read park location
     
     return SB_OK;
@@ -204,7 +224,7 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, int nBufferLen)
             }
             return nErr;
         }
-
+/*
 #ifdef ATCS_DEBUG
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
@@ -212,7 +232,7 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, int nBufferLen)
         fprintf(Logfile, "[%s] [ATCS::readResponse] *pszBufPtr = 0x%02X\n", timestamp, *pszBufPtr);
         fflush(Logfile);
 #endif
-
+*/
         if (ulBytesRead !=1) {// timeout
             if (m_bDebugLog) {
                 snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSreadResponse] readFile Timeout.\n");
@@ -497,6 +517,71 @@ int ATCS::Abort()
     return nErr;
 }
 
+#pragma mark - time and site methods
+int ATCS::syncTime()
+{
+    int nErr = ATCS_OK;
+    int yy, mm, dd, h, min, dst;
+    double sec;
+    int n12h_time;
+
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szTemp[SERIAL_BUFFER_SIZE];
+    char szAmPm[4];
+
+    m_pTsx->localDateTime(yy, mm, dd, h, min, sec, dst);
+    if(!m_b24h) {
+        n12h_time = h%12;
+        if(h<12)
+            strncpy(szAmPm,"AM",4);
+        else
+            strncpy(szAmPm,"PM",4);
+        snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.2f%s", n12h_time, min, sec, szAmPm);
+    }
+    else {
+        snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.2f", h, min, sec);
+    }
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSst%s;", szTemp);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    getStandardTime();
+    m_bAligned = false; // changing time void alignement
+
+    return nErr;
+}
+
+
+int ATCS::syncDate()
+{
+    int nErr = ATCS_OK;
+    int yy, mm, dd, h, min, dst;
+    double sec;
+
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szTemp[SERIAL_BUFFER_SIZE];
+
+    m_pTsx->localDateTime(yy, mm, dd, h, min, sec, dst);
+    // yy is actually yyyy, need conversion to yy, 2017 -> 17
+    // ugly :
+    yy = yy - 2000;
+
+    if(!m_bDdMmYy) {
+        snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d/%02d/%02d", mm, dd, yy);
+    }
+    else {
+        snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d/%02d/%02d", dd, mm, yy);
+    }
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSsd%s;", szTemp);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    getStandardDate();
+    m_bAligned = false; // changing date void alignement
+    return nErr;
+}
+
 #pragma mark - Special commands & functions
 int ATCS::disablePacketSeqChecking()
 {
@@ -507,6 +592,71 @@ int ATCS::disablePacketSeqChecking()
 
     return nErr;
 }
+
+int ATCS::checkSiteTimeDateSetOnce(bool &bSet)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    bSet = false;
+    nErr = ATCSSendCommand("!ACst;", szResp, SERIAL_BUFFER_SIZE);
+    if(strncmp(szResp,"Yes",SERIAL_BUFFER_SIZE) == 0) {
+        bSet = true;
+    }
+    return nErr;
+}
+
+int ATCS::getLocalTimeFormat(bool &b24h)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!TGlf;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    b24h = false;
+    if(strncmp(szResp,"24hr",SERIAL_BUFFER_SIZE) == 0) {
+        b24h = true;
+    }
+
+    return nErr;
+}
+
+int ATCS::getDateFormat(bool &bDdMmYy )
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!TGdf;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    bDdMmYy = false;
+    if(strncmp(szResp,"dd/mm/yy",SERIAL_BUFFER_SIZE) == 0) {
+        bDdMmYy = true;
+    }
+    return nErr;
+}
+
+int ATCS::getStandardTime()
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!TGst;", szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+int ATCS::getStandardDate()
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!TGsd;", szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
 
 int ATCS::setAsyncUpdateEnabled(bool bEnable)
 {

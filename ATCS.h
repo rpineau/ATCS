@@ -88,6 +88,9 @@ public:
 
     int Abort();
 
+    int syncTime();
+    int syncDate();
+
 private:
 
     SerXInterface                       *m_pSerx;
@@ -110,11 +113,20 @@ private:
 	
     bool    m_bJNOW;
     bool    m_bAligned;
+    bool    m_b24h;
+    bool    m_bDdMmYy;
+    bool    m_bTimeSetOnce;
+
 
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen);
     int     ATCSreadResponse(unsigned char *pszRespBuffer, int bufferLen);
     int     atclEnter();
     int     disablePacketSeqChecking();
+    int     checkSiteTimeDateSetOnce(bool &bSet);
+    int     getLocalTimeFormat(bool &b24h);
+    int     getDateFormat(bool &bDdMmYy);
+    int     getStandardTime();
+    int     getStandardDate();
 
     int     setTarget(double dRa, double dDec);
     int     setAsyncUpdateEnabled(bool bEnable);
@@ -122,7 +134,6 @@ private:
     int     alignFromTargetRA_DecCalcSide();
     int     alignFromTargetRA_DecCalcSideEpochNow();
     int     alignFromLastPosition();
-
     int     calFromTargetRA_DecEpochNow();
     int     calFromTargetRA_Dec();
 

@@ -233,6 +233,15 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 	if (!strcmp(pszEvent, "on_timer")) {
 	}
 
+    if (!strcmp(pszEvent, "on_pushButton_clicked")) {
+        // mATCS.syncLocation();
+    }
+
+    if (!strcmp(pszEvent, "on_pushButton_2_clicked")) {
+        mATCS.syncTime();
+        mATCS.syncDate();
+    }
+
 	return;
 }
 
