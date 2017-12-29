@@ -183,17 +183,6 @@ int X2Mount::execModalSettingsDialog(void)
     char szTime[SERIAL_BUFFER_SIZE];
     char szDate[SERIAL_BUFFER_SIZE];
 
-#ifdef ATCS_X2_DEBUG
-	time_t ltime;
-	char *timestamp;
-	if (LogFile) {
-		ltime = time(NULL);
-		timestamp = asctime(localtime(&ltime));
-		timestamp[strlen(timestamp) - 1] = 0;
-		fprintf(LogFile, "[%s] execModelSettingsDialog called %d\n", timestamp, m_bPolarisHomeAlignmentSet);
-        fflush(LogFile);
-	}
-#endif
 	
 	if (NULL == ui) return ERR_POINTER;
 	
@@ -223,7 +212,7 @@ int X2Mount::execModalSettingsDialog(void)
         }
 #endif
 
-        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s %s",szTime, szDate);
+        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
         dx->setPropertyString("time_date", "text", szTmpBuf);
     }
 	//Display the user interface
@@ -259,7 +248,7 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 	if (!strcmp(pszEvent, "on_timer")) {
         mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
         mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
-        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s %s",szTime, szDate);
+        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
         uiex->setPropertyString("time_date", "text", szTmpBuf);
 	}
 
@@ -272,7 +261,7 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
         mATCS.syncDate();
         mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
         mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
-        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s %s",szTime, szDate);
+        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
         uiex->setPropertyString("time_date", "text", szTmpBuf);
     }
 
@@ -441,32 +430,28 @@ int X2Mount::startSlewTo(const double& dRa, const double& dDec)
 	}
 #endif
 
-    // nErr = mATCS.StartSlewTo(dRa, dDec);
-	m_wasslewing = true;
+    nErr = mATCS.startSlewTo(dRa, dDec);
 	return nErr;
 }
 
 int X2Mount::isCompleteSlewTo(bool& bComplete) const
 {
+    int nErr = SB_OK;
     if(!m_bLinked)
         return ERR_NOLINK;
 
     X2Mount* pMe = (X2Mount*)this;
     X2MutexLocker ml(pMe->GetMutex());
 
-    // bComplete = mATCS.GetIsNotGoto();
+    nErr = pMe->mATCS.isSlewToComplete(bComplete);
 	
-    bComplete = true; // FIXME
-	return SB_OK;
+	return nErr;
 }
 
 int X2Mount::endSlewTo(void)
 {
     if(!m_bLinked)
         return ERR_NOLINK;
-
-    X2MutexLocker ml(GetMutex());
-    // do stuff
     return SB_OK;
 }
 

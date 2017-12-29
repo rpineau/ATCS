@@ -241,16 +241,8 @@ private:
 
 	bool m_bSynced;
 	bool m_bParked;
-	bool m_wasslewing;
-	
-	int m_HomePolarisClock;
-	double m_HomeAlignmentHA;
-	double m_HomeAlignmentDEC;
-	bool m_bPolarisHomeAlignmentSet;
+
 	char m_PortName[MAX_PORT_NAME_SIZE];
-	bool m_bPolarisAlignmentSlew;
-	int m_iST4GuideRateIndex;
-	int m_iPostSlewDelay;
 	
 	int m_CurrentRateIndex;
 	char SlewSpeedNames[NSLEWSPEEDS][MAXSLEWNAMESIZE];

@@ -408,6 +408,7 @@ int ATCS::setTarget(double dRa, double dDec)
     return nErr;
 }
 
+#pragma mark - Sync and Cal
 int ATCS::syncTo(double dRa, double dDec)
 {
     int nErr = ATCS_OK;
@@ -476,7 +477,75 @@ int ATCS::isSynced(bool &bSyncked)
     return nErr;
 }
 
-int ATCS::gotoPark(double dRa, double dDEc)
+#pragma mark - slew
+
+int ATCS::startSlewTo(double dRa, double dDec)
+{
+    int nErr = ATCS_OK;
+    bool bAligned;
+
+    nErr = isSynced(bAligned);
+    if(nErr)
+        return nErr;
+
+    // set sync target coordinate
+    nErr = setTarget(dRa, dDec);
+    if(nErr)
+        return nErr;
+
+    slewTargetRA_DecEpochNow();
+    return nErr;
+}
+
+int ATCS::slewTargetRA_DecEpochNow()
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!GTrn;", szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+
+}
+
+int ATCS::isSlewToComplete(bool &bComplete)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    int nPrecentRemaining;
+
+    bComplete = false;
+
+    nErr = ATCSSendCommand("!GGgr;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::isSlewToComplete] szResp : %s\n", timestamp, szResp);
+    fflush(Logfile);
+#endif
+
+    // remove the %
+    szResp[strlen(szResp) -1 ] = 0;
+    
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::isSlewToComplete] szResp : %s\n", timestamp, szResp);
+    fflush(Logfile);
+#endif
+
+    nPrecentRemaining = atoi(szResp);
+    if(nPrecentRemaining == 0)
+        bComplete = true;
+
+    return nErr;
+}
+
+int ATCS::slewToPark(double dRa, double dDEc)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -562,8 +631,7 @@ int ATCS::syncDate()
 
     m_pTsx->localDateTime(yy, mm, dd, h, min, sec, dst);
     // yy is actually yyyy, need conversion to yy, 2017 -> 17
-    // ugly :
-    yy = yy - 2000;
+    yy = yy - (int(yy / 1000) * 1000);
 
     if(!m_bDdMmYy) {
         snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d/%02d/%02d", mm, dd, yy);

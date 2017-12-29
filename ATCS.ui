@@ -151,7 +151,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>Sync location and timezone from TheSkyX Pro :</string>
+        <string>Sync location and timezone from TheSkyX :</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -167,7 +167,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>Sync time and date from TheSyX Pro :</string>
+        <string>Sync time and date from TheSyX :</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -189,14 +189,14 @@
       <widget class="QLabel" name="label_3">
        <property name="geometry">
         <rect>
-         <x>80</x>
+         <x>70</x>
          <y>20</y>
-         <width>220</width>
+         <width>260</width>
          <height>20</height>
         </rect>
        </property>
        <property name="text">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ff0000;&quot;&gt;These  syncs  will void Alignement.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; color:#ff0000;&quot;&gt;Syncing any of these will void Alignement.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
       </widget>
       <widget class="QLabel" name="label_4">
@@ -209,7 +209,7 @@
         </rect>
        </property>
        <property name="text">
-        <string>ATCS time and date :</string>
+        <string>ATCS date and time :</string>
        </property>
       </widget>
       <widget class="QLabel" name="time_date">
@@ -217,12 +217,12 @@
         <rect>
          <x>170</x>
          <y>110</y>
-         <width>130</width>
+         <width>180</width>
          <height>20</height>
         </rect>
        </property>
        <property name="text">
-        <string>hh:mm:ss.t dd/mm/yy</string>
+        <string>dd/mm/yy  -  hh:mm:ss</string>
        </property>
       </widget>
      </widget>

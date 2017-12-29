@@ -73,6 +73,7 @@ public:
 
     int getNbSlewRates();
     int getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize);
+
     
     int getFirmwareVersion(char *version, int strMaxLen);
     int getModel(char *model, int strMaxLen);
@@ -81,7 +82,9 @@ public:
     int syncTo(double dRa, double dDec);
     int isSynced(bool &bSyncked);
 
-    int gotoPark(double dRa, double dDEc);
+    int startSlewTo(double dRa, double dDec);
+    int isSlewToComplete(bool &bComplete);
+    int slewToPark(double dRa, double dDEc);
     int unPark();
     int getAtPark(bool &bParked);
 
@@ -94,6 +97,7 @@ public:
     int getStandardDate(char *szDate, int nMaxLen);
     int syncTime();
     int syncDate();
+
 
 private:
 
@@ -138,6 +142,8 @@ private:
     int     alignFromLastPosition();
     int     calFromTargetRA_DecEpochNow();
     int     calFromTargetRA_Dec();
+
+    int     slewTargetRA_DecEpochNow();
 
     void    convertDecDegToDDMMSS(double dDeg, char *szResult, int size);
     int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);
