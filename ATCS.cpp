@@ -484,12 +484,35 @@ int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaA
     char szResp[SERIAL_BUFFER_SIZE];
 
     if(!bTrackingOn) { // stop tracking
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::setTrackingRates] setting to Drift\n", timestamp);
+        fflush(Logfile);
+#endif
         nErr = ATCSSendCommand("!RStrDrift;", szResp, SERIAL_BUFFER_SIZE);
     }
     else if(bTrackingOn && bIgnoreRates) { // sidereal
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::setTrackingRates] setting to Sidereal\n", timestamp);
+        fflush(Logfile);
+#endif
         nErr = ATCSSendCommand("!RStrSidereal;", szResp, SERIAL_BUFFER_SIZE);
     }
     else { // custom rate
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::setTrackingRates] setting to Custom\n", timestamp);
+        fprintf(Logfile, "[%s] [ATCS::setTrackingRates] dTrackRaArcSecPerHr = %f\n", timestamp, dTrackRaArcSecPerHr);
+        fprintf(Logfile, "[%s] [ATCS::setTrackingRates] dTrackDecArcSecPerHr = %f\n", timestamp, dTrackDecArcSecPerHr);
+        fflush(Logfile);
+#endif
         nErr = setCustomTRateOffsetRA(dTrackRaArcSecPerHr);
         nErr |= setCustomTRateOffsetDec(dTrackDecArcSecPerHr);
         if(nErr)
@@ -506,7 +529,7 @@ int ATCS::getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &
 
     nErr = ATCSSendCommand("!RGtr;", szResp, SERIAL_BUFFER_SIZE);
     bTrackingOn = true;
-    if(strncmp(szResp, "drift", SERIAL_BUFFER_SIZE)==0) {
+    if(strncmp(szResp, "Drift", SERIAL_BUFFER_SIZE)==0) {
         bTrackingOn = false;
     }
     nErr = getCustomTRateOffsetRA(dTrackRaArcSecPerHr);
@@ -544,7 +567,7 @@ int ATCS::getCustomTRateOffsetRA(double &dTrackRaArcSecPerHr)
     int nErr;
     char szResp[SERIAL_BUFFER_SIZE];
 
-    nErr = ATCSSendCommand("RGor", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!RGor;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
     dTrackRaArcSecPerHr = atof(szResp);
@@ -557,7 +580,7 @@ int ATCS::getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr)
     int nErr;
     char szResp[SERIAL_BUFFER_SIZE];
 
-    nErr = ATCSSendCommand("RGod", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!RGod;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
     dTrackDecArcSecPerHr = atof(szResp);
@@ -605,6 +628,15 @@ int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, int nRate)
 
     m_nOpenLoopDir = Dir;
 
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::startOpenSlew] setting to Dir %d\n", timestamp, Dir);
+    fprintf(Logfile, "[%s] [ATCS::startOpenSlew] Setting rate to %d\n", timestamp, nRate);
+    fflush(Logfile);
+#endif
+
     // select rate
     if(nRate == 4) { // "Slew"
         nErr = ATCSSendCommand("!KSsl;", szResp, SERIAL_BUFFER_SIZE);
@@ -619,16 +651,16 @@ int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, int nRate)
     // figure out direction
     switch(Dir){
         case MountDriverInterface::MD_NORTH:
-            nErr = ATCSSendCommand("!KSpu;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!KSpu100;", szResp, SERIAL_BUFFER_SIZE);
             break;
         case MountDriverInterface::MD_SOUTH:
-            nErr = ATCSSendCommand("!KSpd;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!KSpd100;", szResp, SERIAL_BUFFER_SIZE);
             break;
         case MountDriverInterface::MD_EAST:
-            nErr = ATCSSendCommand("!KSpl;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!KSpl100;", szResp, SERIAL_BUFFER_SIZE);
             break;
         case MountDriverInterface::MD_WEST:
-            nErr = ATCSSendCommand("!KSsr;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!KSsr100;", szResp, SERIAL_BUFFER_SIZE);
             break;
     }
 
@@ -639,6 +671,14 @@ int ATCS::stopOpenLoopMove()
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
+
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::stopOpenLoopMove] Dir was %d\n", timestamp, m_nOpenLoopDir);
+    fflush(Logfile);
+#endif
 
     switch(m_nOpenLoopDir){
         case MountDriverInterface::MD_NORTH:

@@ -69,6 +69,7 @@ X2Mount::~X2Mount()
 #ifdef ATCS_X2_DEBUG
 	// Close LogFile
 	if (LogFile) {
+        fflush(LogFile);
 		fclose(LogFile);
 	}
 #endif
@@ -122,14 +123,24 @@ int X2Mount::startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const i
 		time_t ltime = time(NULL);
 		char *timestamp = asctime(localtime(&ltime));
 		timestamp[strlen(timestamp) - 1] = 0;
-		fprintf(LogFile, "[%s] startOpenLoopMove called %d %d\n", timestamp, Dir, nRateIndex);
+        fprintf(LogFile, "[%s] startOpenLoopMove called Dir: %d , Rate: %d\n", timestamp, Dir, nRateIndex);
         fflush(LogFile);
 	}
 #endif
 
     nErr = mATCS.startOpenSlew(Dir, nRateIndex);
-    if(nErr)
+    if(nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] startOpenLoopMove ERROR %d\n", timestamp, nErr);
+            fflush(LogFile);
+        }
+#endif
         return ERR_CMDFAILED;
+    }
     return SB_OK;
 }
 
@@ -152,9 +163,18 @@ int X2Mount::endOpenLoopMove(void)
 #endif
 
     nErr = mATCS.stopOpenLoopMove();
-    if(nErr)
+    if(nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] endOpenLoopMove ERROR %d\n", timestamp, nErr);
+            fflush(LogFile);
+        }
+#endif
         return ERR_CMDFAILED;
-
+    }
     return nErr;
 }
 
@@ -188,7 +208,6 @@ int X2Mount::execModalSettingsDialog(void)
 	X2GUIInterface*					ui = uiutil.X2UI();
 	X2GUIExchangeInterface*			dx = NULL;//Comes after ui is loaded
 	bool bPressedOK = false;
-	int i;
     char szTmpBuf[SERIAL_BUFFER_SIZE];
     char szTime[SERIAL_BUFFER_SIZE];
     char szDate[SERIAL_BUFFER_SIZE];
@@ -403,16 +422,27 @@ int X2Mount::raDec(double& ra, double& dec, const bool& bCached)
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
-	
+
 	// Get the RA and DEC from the mount
 	nErr = mATCS.getRaAndDec(ra, dec);
     if(nErr)
         nErr = ERR_CMDFAILED;
 
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+//        fprintf(LogFile, "[%s] raDec Called. Ra : %f , Dec : %f \n", timestamp, ra, dec);
+        fflush(LogFile);
+    }
+#endif
+
+
 	return nErr;
 }
 
-int X2Mount::abort(void)
+int X2Mount::abort()
 {
     int nErr = SB_OK;
     if(!m_bLinked)
@@ -481,6 +511,15 @@ int X2Mount::isCompleteSlewTo(bool& bComplete) const
 
 int X2Mount::endSlewTo(void)
 {
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] endSlewTo Called\n", timestamp);
+        fflush(LogFile);
+    }
+#endif
     return SB_OK;
 }
 
@@ -537,7 +576,7 @@ int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates,
 		time_t ltime = time(NULL);
 		char *timestamp = asctime(localtime(&ltime));
 		timestamp[strlen(timestamp) - 1] = 0;
-		fprintf(LogFile, "[%s] setTrackingRates Called Tracking On %d Ignore Rates%d\n", timestamp, bTrackingOn, bIgnoreRates);
+        fprintf(LogFile, "[%s] setTrackingRates Called. Tracking On: %d , Ra rate : %f , Dec rate: %f\n", timestamp, bTrackingOn, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
         fflush(LogFile);
 	}
 #endif
@@ -555,14 +594,31 @@ int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates,
 int X2Mount::trackingRates(bool& bTrackingOn, double& dRaRateArcSecPerSec, double& dDecRateArcSecPerSec)
 {
     int nErr = SB_OK;
+    double dTrackRaArcSecPerHr;
+    double dTrackDecArcSecPerHr;
+
     if(!m_bLinked)
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
 
-    // nErr = getTrckingRate(bTrackingOn, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
+
+    nErr = mATCS.getTrackRates(bTrackingOn, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
     if(nErr)
         return ERR_CMDFAILED;
+
+    dRaRateArcSecPerSec = dTrackRaArcSecPerHr / 3600;
+    dDecRateArcSecPerSec = dTrackDecArcSecPerHr / 3600;
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+//         fprintf(LogFile, "[%s] trackingRates Called. Tracking On: %d , Ra rate : %f , Dec rate: %f\n", timestamp, bTrackingOn, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
+        fflush(LogFile);
+    }
+#endif
 
 	return nErr;
 }
@@ -574,7 +630,39 @@ int X2Mount::siderealTrackingOn()
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] siderealTrackingOn Called \n", timestamp);
+        fflush(LogFile);
+    }
+#endif
+
     nErr = setTrackingRates( true, true, 0.0, 0.0);
+    if(nErr)
+        return ERR_CMDFAILED;
+    return nErr;
+}
+
+int X2Mount::trackingOff()
+{
+    int nErr = SB_OK;
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
+    X2MutexLocker ml(GetMutex());
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] trackingOff Called \n", timestamp);
+        fflush(LogFile);
+    }
+#endif
+    nErr = setTrackingRates( false, true, 0.0, 0.0);
     if(nErr)
         return ERR_CMDFAILED;
     return nErr;
@@ -618,7 +706,7 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
 		time_t ltime = time(NULL);
 		char *timestamp = asctime(localtime(&ltime));
 		timestamp[strlen(timestamp) - 1] = 0;
-		fprintf(LogFile, "[%s] startPark Called Alt %f Az %f Ra %f Dec %f\n", timestamp, dAz, dAlt, dRa, dDec);
+        fprintf(LogFile, "[%s] startPark Called. Alt: %f , Az: %f [ Ra: %f , Dec: %f]\n", timestamp, dAz, dAlt, dRa, dDec);
         fflush(LogFile);
 	}
 #endif
@@ -718,7 +806,8 @@ double X2Mount::flipHourAngle() {
 		time_t ltime = time(NULL);
 		char *timestamp = asctime(localtime(&ltime));
 		timestamp[strlen(timestamp) - 1] = 0;
-		fprintf(LogFile, "[%s] flipHourAngle called\n", timestamp);
+		// fprintf(LogFile, "[%s] flipHourAngle called\n", timestamp);
+        fflush(LogFile);
 	}
 #endif
 
@@ -733,7 +822,8 @@ int X2Mount::gemLimits(double& dHoursEast, double& dHoursWest)
 		time_t ltime = time(NULL);
 		char *timestamp = asctime(localtime(&ltime));
 		timestamp[strlen(timestamp) - 1] = 0;
-		fprintf(LogFile, "[%s] gemLimits called\n", timestamp);
+		// fprintf(LogFile, "[%s] gemLimits called\n", timestamp);
+        fflush(LogFile);
 	}
 #endif
 

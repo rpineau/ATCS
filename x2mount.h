@@ -180,6 +180,7 @@ public:
 	virtual int setTrackingRates( const bool& bTrackingOn, const bool& bIgnoreRates, const double& dRaRateArcSecPerSec, const double& dDecRateArcSecPerSec);
 	virtual int trackingRates( bool& bTrackingOn, double& dRaRateArcSecPerSec, double& dDecRateArcSecPerSec);
     virtual int siderealTrackingOn();
+    virtual int trackingOff();
 
 	/* Parking Interface */
 	virtual bool							isParked(void);
