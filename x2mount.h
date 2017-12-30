@@ -186,16 +186,12 @@ public:
 	virtual int								startPark(const double& dAz, const double& dAlt);
 	virtual int								isCompletePark(bool& bComplete) const;
 	virtual int								endPark(void);
-	
-	
+
 	/* Unparking Interface */
 	int								startUnpark(void);
-	/*!Called to monitor the unpark process.  \param bComplete Set to true if the unpark is complete, otherwise set to false.*/
 	int								isCompleteUnpark(bool& bComplete) const;
-	/*!Called once the unpark is complete.  This is called once for every corresponding startUnpark() allowing software implementations of unpark.*/
 	int								endUnpark(void);
 	
-
     //SerialPortParams2Interface
     virtual void            portName(BasicStringInterface& str) const            ;
     virtual void            setPortName(const char* szPort)                        ;

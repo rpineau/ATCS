@@ -119,10 +119,10 @@
      <widget class="QGroupBox" name="groupBox">
       <property name="geometry">
        <rect>
-        <x>19</x>
+        <x>20</x>
         <y>150</y>
-        <width>410</width>
-        <height>180</height>
+        <width>400</width>
+        <height>141</height>
        </rect>
       </property>
       <property name="title">
@@ -223,6 +223,48 @@
        </property>
        <property name="text">
         <string>dd/mm/yy  -  hh:mm:ss</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>290</y>
+        <width>400</width>
+        <height>71</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Park</string>
+      </property>
+      <widget class="QLabel" name="label_6">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>30</y>
+         <width>260</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Set park position to current mount position :</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_3">
+       <property name="geometry">
+        <rect>
+         <x>310</x>
+         <y>30</y>
+         <width>70</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Set</string>
        </property>
       </widget>
      </widget>

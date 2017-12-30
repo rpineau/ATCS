@@ -477,6 +477,95 @@ int ATCS::isSynced(bool &bSyncked)
     return nErr;
 }
 
+#pragma mark - tracking rates
+int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    if(!bTrackingOn) { // stop tracking
+        nErr = ATCSSendCommand("!RStrDrift;", szResp, SERIAL_BUFFER_SIZE);
+    }
+    else if(bTrackingOn && bIgnoreRates) { // sidereal
+        nErr = ATCSSendCommand("!RStrSidereal;", szResp, SERIAL_BUFFER_SIZE);
+    }
+    else { // custom rate
+        nErr = setCustomTRateOffsetRA(dTrackRaArcSecPerHr);
+        nErr |= setCustomTRateOffsetDec(dTrackDecArcSecPerHr);
+        if(nErr)
+            return nErr; // if we cant set the rate no need to switch to custom.
+        nErr = ATCSSendCommand("!RStrCustom;", szResp, SERIAL_BUFFER_SIZE);
+    }
+    return nErr;
+}
+
+int ATCS::getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &dTrackDecArcSecPerHr)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!RGtr;", szResp, SERIAL_BUFFER_SIZE);
+    bTrackingOn = true;
+    if(strncmp(szResp, "drift", SERIAL_BUFFER_SIZE)==0) {
+        bTrackingOn = false;
+    }
+    nErr = getCustomTRateOffsetRA(dTrackRaArcSecPerHr);
+    nErr |= getCustomTRateOffsetDec(dTrackDecArcSecPerHr);
+
+    return nErr;
+}
+
+int ATCS::setCustomTRateOffsetRA(double dRa)
+{
+    int nErr;
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!RSor%.2f;", dRa);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+int ATCS::setCustomTRateOffsetDec(double dDec)
+{
+    int nErr;
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!RSod%.2f;", dDec);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+int ATCS::getCustomTRateOffsetRA(double &dTrackRaArcSecPerHr)
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("RGor", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    dTrackRaArcSecPerHr = atof(szResp);
+
+    return nErr;
+}
+
+int ATCS::getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr)
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("RGod", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    dTrackDecArcSecPerHr = atof(szResp);
+
+    return nErr;
+}
+
+
 #pragma mark - slew
 
 int ATCS::startSlewTo(double dRa, double dDec)
@@ -524,7 +613,7 @@ int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, int nRate)
         // clear slew
         nErr = ATCSSendCommand("!KCsl;", szResp, SERIAL_BUFFER_SIZE);
         // select rate
-        // KScv + 1,2 3 or 4 for ViewVel 1,2,3,4, ViewVel 1 is index 0 so nRate+1
+        // KScv + 1,2 3 or 4 for ViewVel 1,2,3,4, 'ViewVel 1' is index 0 so nRate+1
         snprintf(szCmd, SERIAL_BUFFER_SIZE, "!KScv%d;", nRate+1);
     }
     // figure out direction
@@ -602,14 +691,29 @@ int ATCS::isSlewToComplete(bool &bComplete)
     return nErr;
 }
 
-int ATCS::slewToPark(double dRa, double dDEc)
+int ATCS::gotoPark(double dRa, double dDEc)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
+    // set park position ?
+    // or goto ?
+    // goto park
+    nErr = ATCSSendCommand("!GTop;", szResp, SERIAL_BUFFER_SIZE);
+
     return nErr;
 }
 
+int ATCS::markParkPosition()
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!AMpp;", szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+
+}
 
 int ATCS::getAtPark(bool &bParked)
 {

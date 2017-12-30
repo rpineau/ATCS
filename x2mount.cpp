@@ -207,6 +207,10 @@ int X2Mount::execModalSettingsDialog(void)
 
 	// Set values in the userinterface
     if(m_bLinked) {
+        dx->setEnabled("pushButton",true);
+        dx->setEnabled("pushButton_2",true);
+        dx->setEnabled("pushButton_3",true);
+
         mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
         mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
 #ifdef ATCS_X2_DEBUG
@@ -225,6 +229,11 @@ int X2Mount::execModalSettingsDialog(void)
         snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
         dx->setPropertyString("time_date", "text", szTmpBuf);
     }
+    else {
+        dx->setEnabled("pushButton",false);
+        dx->setEnabled("pushButton_2",false);
+        dx->setEnabled("pushButton_3",false);
+    }
 	//Display the user interface
 	if ((nErr = ui->exec(bPressedOK)))
 		return nErr;
@@ -241,6 +250,9 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
     char szTmpBuf[SERIAL_BUFFER_SIZE];
     char szTime[SERIAL_BUFFER_SIZE];
     char szDate[SERIAL_BUFFER_SIZE];
+
+    if(!m_bLinked)
+        return ;
 
 	X2MutexLocker ml(GetMutex());
 	
@@ -273,6 +285,10 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
         mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
         snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
         uiex->setPropertyString("time_date", "text", szTmpBuf);
+    }
+
+    if (!strcmp(pszEvent, "on_pushButton_3_clicked")) {
+        mATCS.markParkPosition();
     }
 
 	return;
@@ -510,7 +526,8 @@ bool X2Mount::isSynced(void)
 int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates, const double& dRaRateArcSecPerSec, const double& dDecRateArcSecPerSec)
 {
     int nErr = SB_OK;
-
+    double dTrackRaArcSecPerHr;
+    double dTrackDecArcSecPerHr;
     if(!m_bLinked)
         return ERR_NOLINK;
 
@@ -524,7 +541,10 @@ int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates,
         fflush(LogFile);
 	}
 #endif
-    // nErr = mATCS.SetTrackingRates(bTrackingOn, bIgnoreRates, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
+    dTrackRaArcSecPerHr = dRaRateArcSecPerSec * 3600;
+    dTrackDecArcSecPerHr = dDecRateArcSecPerSec * 3600;
+
+    nErr = mATCS.setTrackingRates(bTrackingOn, bIgnoreRates, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
     if(nErr)
         return ERR_CMDFAILED;
 
@@ -534,25 +554,27 @@ int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates,
 
 int X2Mount::trackingRates(bool& bTrackingOn, double& dRaRateArcSecPerSec, double& dDecRateArcSecPerSec)
 {
+    int nErr = SB_OK;
     if(!m_bLinked)
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
-	bTrackingOn = false;
-	dRaRateArcSecPerSec = -1000.0;
-	dDecRateArcSecPerSec = -1000.0;
-	
-	return SB_OK;
+
+    // nErr = getTrckingRate(bTrackingOn, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
+    if(nErr)
+        return ERR_CMDFAILED;
+
+	return nErr;
 }
 
 int X2Mount::siderealTrackingOn()
 {
-    int nErr;
+    int nErr = SB_OK;
     if(!m_bLinked)
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
-    // nErr = setTrackRate("Sidereal");
+    nErr = setTrackingRates( true, true, 0.0, 0.0);
     if(nErr)
         return ERR_CMDFAILED;
     return nErr;
@@ -601,6 +623,7 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
 	}
 #endif
     // goto park
+    nErr = mATCS.gotoPark(dRa, dDec);
     if(nErr)
         return ERR_CMDFAILED;
 
@@ -635,7 +658,12 @@ int X2Mount::isCompletePark(bool& bComplete) const
 
 int X2Mount::endPark(void)
 {
-    return SB_OK;
+    int nErr = SB_OK;
+
+    nErr = mATCS.unPark();
+    if(nErr)
+        nErr = ERR_CMDFAILED;
+    return nErr;
 }
 
 int		X2Mount::startUnpark(void)

@@ -84,13 +84,17 @@ public:
     int syncTo(double dRa, double dDec);
     int isSynced(bool &bSyncked);
 
+    int setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr);
+    int getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &dTrackDecArcSecPerHr);
+
     int startSlewTo(double dRa, double dDec);
     int isSlewToComplete(bool &bComplete);
 
     int startOpenSlew(const MountDriverInterface::MoveDir Dir, int nRate);
     int stopOpenLoopMove();
 
-    int slewToPark(double dRa, double dDEc);
+    int gotoPark(double dRa, double dDEc);
+    int markParkPosition();
     int unPark();
     int getAtPark(bool &bParked);
 
@@ -150,6 +154,11 @@ private:
     int     calFromTargetRA_Dec();
 
     int     slewTargetRA_DecEpochNow();
+
+    int     setCustomTRateOffsetRA(double dRa);
+    int     setCustomTRateOffsetDec(double dDec);
+    int     getCustomTRateOffsetRA(double &dTrackRaArcSecPerHr);
+    int     getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr);
 
     void    convertDecDegToDDMMSS(double dDeg, char *szResult, int size);
     int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);
