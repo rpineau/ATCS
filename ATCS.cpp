@@ -889,6 +889,86 @@ int ATCS::syncDate()
     return nErr;
 }
 
+int ATCS::getSiteName(char *szSiteName, int nMaxSize)
+{
+    int nErr = ATCS_OK;
+    int nSiteNb;
+
+    nErr = getUsingSiteNumber(nSiteNb);
+    if(nErr)
+        return nErr;
+
+    nErr = getUsingSiteName(nSiteNb, szSiteName, nMaxSize);
+
+    return nErr;
+}
+
+int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
+{
+    int nErr = ATCS_OK;
+    char szLong[SERIAL_BUFFER_SIZE];
+    char szLat[SERIAL_BUFFER_SIZE];
+    char szTimeZone[SERIAL_BUFFER_SIZE];
+    char szHH[3], szMM[3];
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::setSiteData] dLongitude : %f\n", timestamp, dLongitude);
+    fprintf(Logfile, "[%s] [ATCS::setSiteData] dLatitute : %f\n", timestamp, dLatitute);
+    fprintf(Logfile, "[%s] [ATCS::setSiteData] szTimeZone : %f\n", timestamp, dTimeZone);
+    fflush(Logfile);
+#endif
+
+    convertDecDegToDDMMSS(dLongitude, szLong, SERIAL_BUFFER_SIZE);
+    convertDecDegToDDMMSS(dLatitute, szLat, SERIAL_BUFFER_SIZE);
+    snprintf(szHH,3,"%02d", int(fabs(dTimeZone)));
+    snprintf(szMM,3,"%02d", int((fabs(dTimeZone) - int(fabs(dTimeZone)))) * 100);
+    if(dTimeZone<0) {
+        snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "%s:%sW", szHH, szMM);
+    }
+    else if (dTimeZone>0) {
+        snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "%s:%sE", szHH, szMM);
+    }
+    else
+        snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "00:00");
+
+    // temp fix fo sign issue on Long.
+    if(dTimeZone<0) {
+        strncpy(szLong,szLong+1,SERIAL_BUFFER_SIZE); // skip thr sign
+        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sW", szLong);
+    }
+    else if (dTimeZone >= 0) {
+        strncpy(szLong,szLong+1,SERIAL_BUFFER_SIZE); // skip thr sign
+        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sE", szLong);
+    }
+    // convert signed latitude to N/S
+    if(dLatitute>=0) {
+        strncpy(szLat,szLat+1,SERIAL_BUFFER_SIZE); // skip thr sign
+        snprintf(szLat, SERIAL_BUFFER_SIZE, "%sN", szLat);
+    }
+    else {
+        strncpy(szLat,szLat+1,SERIAL_BUFFER_SIZE); // skip thr sign
+        snprintf(szLat, SERIAL_BUFFER_SIZE, "%sS", szLat);
+    }
+
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::setSiteData] szLong : %s\n", timestamp, szLong);
+    fprintf(Logfile, "[%s] [ATCS::setSiteData] szLat : %s\n", timestamp, szLat);
+    fprintf(Logfile, "[%s] [ATCS::setSiteData] szTimeZone : %s\n", timestamp, szTimeZone);
+    fflush(Logfile);
+#endif
+
+    setSiteLongitude(m_nSiteNumber, szLong);
+    setSiteLatitude(m_nSiteNumber, szLat);
+    setSiteTimezone(m_nSiteNumber, szTimeZone);
+
+    return nErr;
+}
+
 #pragma mark - Special commands & functions
 
 int ATCS::GetTopActiveFault(char *szFault, int nMaxLen)
@@ -914,6 +994,7 @@ int ATCS::disablePacketSeqChecking()
     return nErr;
 }
 
+#pragma mark - site data
 int ATCS::checkSiteTimeDateSetOnce(bool &bSet)
 {
     int nErr = ATCS_OK;
@@ -926,6 +1007,73 @@ int ATCS::checkSiteTimeDateSetOnce(bool &bSet)
     }
     return nErr;
 }
+
+int ATCS::getUsingSiteNumber(int &nSiteNb)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!SGuu;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+
+    nSiteNb = atoi(szResp);
+    m_nSiteNumber = nSiteNb;
+    return nErr;
+
+}
+
+int ATCS::getUsingSiteName(int nSiteNb, char *szSiteName, int nMaxSize)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGun%d;", nSiteNb);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    strncpy(szSiteName, szResp, nMaxSize);
+    return nErr;
+}
+
+int ATCS::setSiteLongitude(int nSiteNb, const char *szLongitude)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SSo%d%s;", nSiteNb, szLongitude);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+int ATCS::setSiteLatitude(int nSiteNb, const char *szLatitude)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SSa%d%s;", nSiteNb, szLatitude);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+int ATCS::setSiteTimezone(int nSiteNb, const char *szTimezone)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SSz%d%s;", nSiteNb, szTimezone);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+#pragma mark  - Time and Date
 
 int ATCS::getLocalTimeFormat(bool &b24h)
 {
@@ -1053,6 +1201,7 @@ void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, int size)
     // convert dDeg decimal value to sDD:MM:SS
 
     cSign = dDeg>=0?'+':'-';
+    dDeg = fabs(dDeg);
     DD = int(dDeg);
     mm = dDeg - DD;
     MM = int(mm*60);

@@ -239,8 +239,15 @@ int X2Mount::execModalSettingsDialog(void)
         dx->setEnabled("alignmentType",true);
         dx->setEnabled("pushButton_4",true);
 
+        mATCS.getSiteName(szTmpBuf, SERIAL_BUFFER_SIZE);
+        dx->setText("siteName", szTmpBuf);
+
         mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
         mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
+        dx->setText("time_date", szTmpBuf);
+
+
         mATCS.GetTopActiveFault(szTmpBuf, SERIAL_BUFFER_SIZE);
         dx->setText("activeFault", szTmpBuf);
 
@@ -261,6 +268,8 @@ int X2Mount::execModalSettingsDialog(void)
         dx->setPropertyString("time_date", "text", szTmpBuf);
     }
     else {
+        dx->setText("time_date", "");
+        dx->setText("siteName", "");
         dx->setEnabled("pushButton",false);
         dx->setEnabled("pushButton_2",false);
         dx->setEnabled("pushButton_3",false);
@@ -306,11 +315,13 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
         mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
         mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
         snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
-        uiex->setPropertyString("time_date", "text", szTmpBuf);
+        uiex->setText("time_date", szTmpBuf);
 	}
 
     if (!strcmp(pszEvent, "on_pushButton_clicked")) {
-        // mATCS.syncLocation();
+        mATCS.setSiteData(m_pTheSkyXForMounts->longitude(),
+                          m_pTheSkyXForMounts->latitude(),
+                          m_pTheSkyXForMounts->timeZone());
     }
 
     if (!strcmp(pszEvent, "on_pushButton_2_clicked")) {

@@ -122,7 +122,7 @@
         <x>20</x>
         <y>150</y>
         <width>400</width>
-        <height>141</height>
+        <height>160</height>
        </rect>
       </property>
       <property name="title">
@@ -154,15 +154,15 @@
         <string>Sync location and timezone from TheSkyX :</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
        </property>
       </widget>
       <widget class="QLabel" name="label_2">
        <property name="geometry">
         <rect>
-         <x>40</x>
-         <y>60</y>
-         <width>260</width>
+         <x>10</x>
+         <y>90</y>
+         <width>280</width>
          <height>40</height>
         </rect>
        </property>
@@ -170,14 +170,14 @@
         <string>Sync time and date from TheSyX :</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
        </property>
       </widget>
       <widget class="QPushButton" name="pushButton_2">
        <property name="geometry">
         <rect>
          <x>310</x>
-         <y>70</y>
+         <y>100</y>
          <width>70</width>
          <height>20</height>
         </rect>
@@ -202,9 +202,9 @@
       <widget class="QLabel" name="label_4">
        <property name="geometry">
         <rect>
-         <x>30</x>
-         <y>110</y>
-         <width>130</width>
+         <x>10</x>
+         <y>130</y>
+         <width>140</width>
          <height>20</height>
         </rect>
        </property>
@@ -215,9 +215,9 @@
       <widget class="QLabel" name="time_date">
        <property name="geometry">
         <rect>
-         <x>170</x>
-         <y>110</y>
-         <width>180</width>
+         <x>150</x>
+         <y>130</y>
+         <width>170</width>
          <height>20</height>
         </rect>
        </property>
@@ -225,12 +225,38 @@
         <string>dd/mm/yy  -  hh:mm:ss</string>
        </property>
       </widget>
+      <widget class="QLabel" name="label_8">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>70</y>
+         <width>130</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>ATCS Site Name :</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="siteName">
+       <property name="geometry">
+        <rect>
+         <x>150</x>
+         <y>70</y>
+         <width>200</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>NNNNNNNNNNNNNN</string>
+       </property>
+      </widget>
      </widget>
      <widget class="QGroupBox" name="groupBox_2">
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>300</y>
+        <y>320</y>
         <width>400</width>
         <height>100</height>
        </rect>
@@ -241,7 +267,7 @@
       <widget class="QLabel" name="label_6">
        <property name="geometry">
         <rect>
-         <x>30</x>
+         <x>10</x>
          <y>30</y>
          <width>270</width>
          <height>20</height>
@@ -251,7 +277,7 @@
         <string>Set park position to current mount position :</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
        </property>
       </widget>
       <widget class="QPushButton" name="pushButton_3">
@@ -270,9 +296,9 @@
       <widget class="QLabel" name="label_7">
        <property name="geometry">
         <rect>
-         <x>60</x>
+         <x>10</x>
          <y>60</y>
-         <width>120</width>
+         <width>110</width>
          <height>20</height>
         </rect>
        </property>
@@ -280,13 +306,13 @@
         <string>Alignment type :</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
        </property>
       </widget>
       <widget class="QComboBox" name="alignmentType">
        <property name="geometry">
         <rect>
-         <x>190</x>
+         <x>130</x>
          <y>60</y>
          <width>104</width>
          <height>21</height>
@@ -311,7 +337,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>410</y>
+        <y>430</y>
         <width>400</width>
         <height>60</height>
        </rect>

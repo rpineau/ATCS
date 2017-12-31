@@ -114,6 +114,8 @@ public:
     int getStandardDate(char *szDate, int nMaxLen);
     int syncTime();
     int syncDate();
+    int getSiteName(char *szSiteName, int nMaxSize);
+    int setSiteData(double dLongitude, double dLatitute, double dTimeZone);
 
     int GetTopActiveFault(char *szFault, int nMaxLen);
 
@@ -133,6 +135,7 @@ private:
     char    m_szHardwareModel[SERIAL_BUFFER_SIZE];
     char    m_szTime[SERIAL_BUFFER_SIZE];
     char    m_szDate[SERIAL_BUFFER_SIZE];
+    int     m_nSiteNumber;
 
 	double  m_dGotoRATarget;						  // Current Target RA;
 	double  m_dGotoDECTarget;                      // Current Goto Target Dec;
@@ -151,6 +154,12 @@ private:
     int     atclEnter();
     int     disablePacketSeqChecking();
     int     checkSiteTimeDateSetOnce(bool &bSet);
+
+    int     getUsingSiteNumber(int &nSiteNb);
+    int     getUsingSiteName(int nSiteNb, char *szSiteName, int nMaxSize);
+    int     setSiteLongitude(int nSiteNb, const char *szLongitude);
+    int     setSiteLatitude(int nSiteNb, const char *szLatitude);
+    int     setSiteTimezone(int nSiteNb, const char *szTimezone);
 
     int     setTarget(double dRa, double dDec);
     int     setAsyncUpdateEnabled(bool bEnable);
