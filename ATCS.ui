@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>461</width>
-    <height>439</height>
+    <height>675</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -59,7 +59,7 @@
       <property name="geometry">
        <rect>
         <x>257</x>
-        <y>370</y>
+        <y>550</y>
         <width>81</width>
         <height>32</height>
        </rect>
@@ -72,7 +72,7 @@
       <property name="geometry">
        <rect>
         <x>340</x>
-        <y>370</y>
+        <y>550</y>
         <width>81</width>
         <height>32</height>
        </rect>
@@ -230,20 +230,20 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>290</y>
+        <y>300</y>
         <width>400</width>
-        <height>71</height>
+        <height>100</height>
        </rect>
       </property>
       <property name="title">
-       <string>Park</string>
+       <string>Settings</string>
       </property>
       <widget class="QLabel" name="label_6">
        <property name="geometry">
         <rect>
-         <x>40</x>
+         <x>30</x>
          <y>30</y>
-         <width>260</width>
+         <width>270</width>
          <height>20</height>
         </rect>
        </property>
@@ -265,6 +265,71 @@
        </property>
        <property name="text">
         <string>Set</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_7">
+       <property name="geometry">
+        <rect>
+         <x>60</x>
+         <y>60</y>
+         <width>120</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Alignment type :</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+      </widget>
+      <widget class="QComboBox" name="alignmentType">
+       <property name="geometry">
+        <rect>
+         <x>190</x>
+         <y>60</y>
+         <width>104</width>
+         <height>21</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton_4">
+       <property name="geometry">
+        <rect>
+         <x>310</x>
+         <y>60</y>
+         <width>70</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Set</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_4">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>410</y>
+        <width>400</width>
+        <height>60</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>highest priority active fault</string>
+      </property>
+      <widget class="QLabel" name="activeFault">
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>30</y>
+         <width>360</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>None</string>
        </property>
       </widget>
      </widget>

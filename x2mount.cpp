@@ -211,8 +211,8 @@ int X2Mount::execModalSettingsDialog(void)
     char szTmpBuf[SERIAL_BUFFER_SIZE];
     char szTime[SERIAL_BUFFER_SIZE];
     char szDate[SERIAL_BUFFER_SIZE];
-
-	
+    int nNbAligmentType;
+    int i;
 	if (NULL == ui) return ERR_POINTER;
 	
 	if ((nErr = ui->loadUserInterface("ATCS.ui", deviceType(), m_nPrivateMulitInstanceIndex)))
@@ -224,14 +224,26 @@ int X2Mount::execModalSettingsDialog(void)
 
     X2MutexLocker ml(GetMutex());
 
+    // fill the combo box
+    nNbAligmentType = mATCS.getNbAlignementType();
+    for(i=0; i<nNbAligmentType; i++) {
+        mATCS.getAlignementTypeName(i, szTmpBuf, SERIAL_BUFFER_SIZE);
+        dx->comboBoxAppendString("alignmentType",szTmpBuf);
+    }
+
 	// Set values in the userinterface
     if(m_bLinked) {
         dx->setEnabled("pushButton",true);
         dx->setEnabled("pushButton_2",true);
         dx->setEnabled("pushButton_3",true);
+        dx->setEnabled("alignmentType",true);
+        dx->setEnabled("pushButton_4",true);
 
         mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
         mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        mATCS.GetTopActiveFault(szTmpBuf, SERIAL_BUFFER_SIZE);
+        dx->setText("activeFault", szTmpBuf);
+
 #ifdef ATCS_X2_DEBUG
         time_t ltime;
         char *timestamp;
@@ -252,6 +264,8 @@ int X2Mount::execModalSettingsDialog(void)
         dx->setEnabled("pushButton",false);
         dx->setEnabled("pushButton_2",false);
         dx->setEnabled("pushButton_3",false);
+        dx->setEnabled("alignmentType",false);
+        dx->setEnabled("pushButton_4",false);
     }
 	//Display the user interface
 	if ((nErr = ui->exec(bPressedOK)))
@@ -260,6 +274,7 @@ int X2Mount::execModalSettingsDialog(void)
 	//Retreive values from the user interface
 	if (bPressedOK)
 	{
+        // get polar alignment type
 	}
 	return nErr;
 }
@@ -269,6 +284,7 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
     char szTmpBuf[SERIAL_BUFFER_SIZE];
     char szTime[SERIAL_BUFFER_SIZE];
     char szDate[SERIAL_BUFFER_SIZE];
+    int nCurrentAlignmentIndex = 0;
 
     if(!m_bLinked)
         return ;
@@ -308,6 +324,12 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 
     if (!strcmp(pszEvent, "on_pushButton_3_clicked")) {
         mATCS.markParkPosition();
+    }
+
+    if (!strcmp(pszEvent, "on_pushButton_4_clicked")) {
+        nCurrentAlignmentIndex = uiex->currentIndex("alignmentType");
+        mATCS.getAlignementTypeName(nCurrentAlignmentIndex, szTmpBuf, SERIAL_BUFFER_SIZE);
+        mATCS.setAlignementType(szTmpBuf);
     }
 
 	return;

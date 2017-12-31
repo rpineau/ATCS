@@ -51,8 +51,11 @@ enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPO
 #define ATCL_ENTER  0xB1
 #define ATCL_ACK    0x8F
 #define ATCL_NACK   0xA5
+
 #define ATCS_NB_SLEW_SPEEDS 5
 #define ATCS_SLEW_NAME_LENGHT 12
+#define ATCS_NB_ALIGNEMENT_TYPE 4
+#define ATCS_ALIGNEMENT_NAME_LENGHT 12
 
 
 
@@ -83,6 +86,10 @@ public:
     int getRaAndDec(double &dRa, double &dDec);
     int syncTo(double dRa, double dDec);
     int isSynced(bool &bSyncked);
+    int getAlignementType(char *szType, int nMaxLEn);
+    int setAlignementType(char *szType);
+    int getNbAlignementType();
+    int getAlignementTypeName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize);
 
     int setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr);
     int getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &dTrackDecArcSecPerHr);
@@ -108,6 +115,7 @@ public:
     int syncTime();
     int syncDate();
 
+    int GetTopActiveFault(char *szFault, int nMaxLen);
 
 private:
 
@@ -169,6 +177,7 @@ private:
     int     parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator);
 
     const char m_aszSlewRateNames[ATCS_NB_SLEW_SPEEDS][ATCS_SLEW_NAME_LENGHT] = { "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4",  "Slew"};
+    const char m_szAlignmentType[ATCS_NB_ALIGNEMENT_TYPE][ATCS_ALIGNEMENT_NAME_LENGHT] = { "Polar", "AltAz", "NearlyPolar", "NearlyAltAz"};
 
 #ifdef ATCS_DEBUG
 	// timestamp for logs

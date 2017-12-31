@@ -477,6 +477,46 @@ int ATCS::isSynced(bool &bSyncked)
     return nErr;
 }
 
+int ATCS::getAlignementType(char *szType, int nMaxLEn)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!NGat;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    strncpy(szType, szResp, nMaxLEn);
+    return nErr;
+}
+
+int ATCS::setAlignementType(char *szType)
+{
+    int nErr = ATCS_OK;
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!NSat%s;", szType);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+int ATCS::getNbAlignementType()
+{
+    return ATCS_NB_ALIGNEMENT_TYPE;
+}
+
+int ATCS::getAlignementTypeName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize)
+{
+    if (nZeroBasedIndex > ATCS_NB_ALIGNEMENT_TYPE)
+        return ATCS_ERROR;
+
+    strncpy(pszOut, m_szAlignmentType[nZeroBasedIndex], nOutMaxSize);
+
+    return ATCS_OK;
+
+}
+
 #pragma mark - tracking rates
 int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr)
 {
@@ -850,6 +890,20 @@ int ATCS::syncDate()
 }
 
 #pragma mark - Special commands & functions
+
+int ATCS::GetTopActiveFault(char *szFault, int nMaxLen)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!HGtf;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    strncpy(szFault, szResp, nMaxLen);
+
+    return nErr;
+}
+
 int ATCS::disablePacketSeqChecking()
 {
     int nErr;
