@@ -933,14 +933,14 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
     else
         snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "00:00");
 
-    // temp fix fo sign issue on Long.
-    if(dTimeZone<0) {
-        strncpy(szLong,szLong+1,SERIAL_BUFFER_SIZE); // skip thr sign
-        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sW", szLong);
+    // Set the W/E
+    if(dLongitude<=0) {
+        strncpy(szLong,szLong+1,SERIAL_BUFFER_SIZE); // skip the sign
+        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sE", szLong);
     }
     else if (dTimeZone >= 0) {
-        strncpy(szLong,szLong+1,SERIAL_BUFFER_SIZE); // skip thr sign
-        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sE", szLong);
+        strncpy(szLong,szLong+1,SERIAL_BUFFER_SIZE); // skip the sign
+        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sW", szLong);
     }
     // convert signed latitude to N/S
     if(dLatitute>=0) {

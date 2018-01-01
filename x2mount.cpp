@@ -319,7 +319,8 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 	}
 
     if (!strcmp(pszEvent, "on_pushButton_clicked")) {
-        mATCS.setSiteData(m_pTheSkyXForMounts->longitude(),
+        // TSX longitude is + going west and - going east, so passing the opposite
+        mATCS.setSiteData( - m_pTheSkyXForMounts->longitude(),
                           m_pTheSkyXForMounts->latitude(),
                           m_pTheSkyXForMounts->timeZone());
     }
