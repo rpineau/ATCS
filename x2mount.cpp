@@ -444,7 +444,7 @@ void X2Mount::deviceInfoModel(BasicStringInterface& str)
         str = cModel;
     }
     else
-        str = "Not connected2";
+        str = "Not connected";
 }
 
 #pragma mark - Common Mount specifics
@@ -467,7 +467,7 @@ int X2Mount::raDec(double& ra, double& dec, const bool& bCached)
         time_t ltime = time(NULL);
         char *timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
-//        fprintf(LogFile, "[%s] raDec Called. Ra : %f , Dec : %f \n", timestamp, ra, dec);
+        fprintf(LogFile, "[%s] raDec Called. Ra : %f , Dec : %f \n", timestamp, ra, dec);
         fflush(LogFile);
     }
 #endif
@@ -587,7 +587,7 @@ int X2Mount::syncMount(const double& ra, const double& dec)
 bool X2Mount::isSynced(void)
 {
     if(!m_bLinked)
-        return ERR_NOLINK;
+        return false;
 
     X2MutexLocker ml(GetMutex());
     mATCS.isSynced(m_bSynced);
@@ -649,7 +649,7 @@ int X2Mount::trackingRates(bool& bTrackingOn, double& dRaRateArcSecPerSec, doubl
         time_t ltime = time(NULL);
         char *timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
-//         fprintf(LogFile, "[%s] trackingRates Called. Tracking On: %d , Ra rate : %f , Dec rate: %f\n", timestamp, bTrackingOn, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
+        fprintf(LogFile, "[%s] trackingRates Called. Tracking On: %d , Ra rate : %f , Dec rate: %f\n", timestamp, bTrackingOn, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
         fflush(LogFile);
     }
 #endif
@@ -789,6 +789,11 @@ int X2Mount::isCompletePark(bool& bComplete) const
 
 int X2Mount::endPark(void)
 {
+    return SB_OK;
+}
+
+int		X2Mount::startUnpark(void)
+{
     int nErr = SB_OK;
 
     nErr = mATCS.unPark();
@@ -797,10 +802,6 @@ int X2Mount::endPark(void)
     return nErr;
 }
 
-int		X2Mount::startUnpark(void)
-{
-	return SB_OK;
-}
 /*!Called to monitor the unpark process.  \param bComplete Set to true if the unpark is complete, otherwise set to false.*/
 int X2Mount::isCompleteUnpark(bool& bComplete) const
 {
@@ -813,14 +814,15 @@ int X2Mount::isCompleteUnpark(bool& bComplete) const
     X2MutexLocker ml(pMe ->GetMutex());
 
     bComplete = true;
+    pMe->m_bParked = false;
     nErr = pMe->mATCS.getAtPark(bIsPArked);
     if(nErr)
         nErr = ERR_CMDFAILED;
 
-    if(bIsPArked)
+    if(bIsPArked) {
         bComplete = false;
-
-    pMe->m_bParked = false;
+        pMe->m_bParked = true;
+    }
 	return SB_OK;
 }
 
@@ -896,7 +898,7 @@ void X2Mount::setPortName(const char* pszPort)
 }
 
 
-void X2Mount::portNameOnToCharPtr(char* pszPort, const int& nMaxSize) const
+void X2Mount::portNameOnToCharPtr(char* pszPort, const unsigned int& nMaxSize) const
 {
     if (NULL == pszPort)
         return;

@@ -56,7 +56,7 @@ class TickCountInterface;
 
 #ifdef ATCS_X2_DEBUG
 #if defined(SB_WIN_BUILD)
-#define HEQ5_LOGFILENAME "C:\ATCS_X2_Logfile.txt"
+#define HEQ5_LOGFILENAME "C:\\ATCS_X2_Logfile.txt"
 #elif defined(SB_LINUX_BUILD)
 #define HEQ5_LOGFILENAME "/tmp/ATCS_X2_Logfile.txt"
 #elif defined (SB_MAC_BUILD)
@@ -246,7 +246,7 @@ private:
 	double SlewSpeeds[NSLEWSPEEDS];
 	char GuideSpeedNames[NGUIDESPEEDS][MAXSLEWNAMESIZE];
 	
-    void portNameOnToCharPtr(char* pszPort, const int& nMaxSize) const;
+    void portNameOnToCharPtr(char* pszPort, const unsigned int& nMaxSize) const;
 
 #ifdef ATCS_X2_DEBUG
     char *timestamp;

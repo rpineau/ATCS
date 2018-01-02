@@ -128,7 +128,7 @@ int ATCS::getNbSlewRates()
 }
 
 // returns "Slew", "ViewVel4", "ViewVel3", "ViewVel2", "ViewVel1"
-int ATCS::getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize)
+int ATCS::getRateName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize)
 {
     if (nZeroBasedIndex > ATCS_NB_SLEW_SPEEDS)
         return ATCS_ERROR;
@@ -140,7 +140,7 @@ int ATCS::getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize)
 
 #pragma mark - ATCS communication
 
-int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen)
+int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen)
 {
     int nErr = ATCS_OK;
     unsigned char szResp[SERIAL_BUFFER_SIZE];
@@ -205,7 +205,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen
 }
 
 
-int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, int nBufferLen)
+int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen)
 {
     int nErr = ATCS_OK;
     unsigned long ulBytesRead = 0;
@@ -281,7 +281,7 @@ int ATCS::atclEnter()
 
 #pragma mark - dome controller informations
 
-int ATCS::getFirmwareVersion(char *pszVersion, int nStrMaxLen)
+int ATCS::getFirmwareVersion(char *pszVersion, unsigned int nStrMaxLen)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -298,7 +298,7 @@ int ATCS::getFirmwareVersion(char *pszVersion, int nStrMaxLen)
     return nErr;
 }
 
-int ATCS::getModel(char *pszModel, int nStrMaxLen)
+int ATCS::getModel(char *pszModel, unsigned int nStrMaxLen)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -478,7 +478,7 @@ int ATCS::isSynced(bool &bSyncked)
     return nErr;
 }
 
-int ATCS::getAlignementType(char *szType, int nMaxLEn)
+int ATCS::getAlignementType(char *szType, unsigned int nMaxLEn)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -507,7 +507,7 @@ int ATCS::getNbAlignementType()
     return ATCS_NB_ALIGNEMENT_TYPE;
 }
 
-int ATCS::getAlignementTypeName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize)
+int ATCS::getAlignementTypeName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize)
 {
     if (nZeroBasedIndex > ATCS_NB_ALIGNEMENT_TYPE)
         return ATCS_ERROR;
@@ -661,7 +661,7 @@ int ATCS::slewTargetRA_DecEpochNow()
 
 }
 
-int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, int nRate)
+int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, unsigned int nRate)
 {
     int nErr = ATCS_OK;
     char szCmd[SERIAL_BUFFER_SIZE];
@@ -923,7 +923,7 @@ int ATCS::syncDate()
     return nErr;
 }
 
-int ATCS::getSiteName(char *szSiteName, int nMaxSize)
+int ATCS::getSiteName(char *szSiteName, unsigned int nMaxSize)
 {
     int nErr = ATCS_OK;
     int nSiteNb;
@@ -1055,7 +1055,7 @@ int ATCS::getUsingSiteNumber(int &nSiteNb)
 
 }
 
-int ATCS::getUsingSiteName(int nSiteNb, char *szSiteName, int nMaxSize)
+int ATCS::getUsingSiteName(int nSiteNb, char *szSiteName, unsigned int nMaxSize)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1138,7 +1138,7 @@ int ATCS::getDateFormat(bool &bDdMmYy )
     return nErr;
 }
 
-int ATCS::getStandardTime(char *szTime, int nMaxLen)
+int ATCS::getStandardTime(char *szTime, unsigned int nMaxLen)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1150,7 +1150,7 @@ int ATCS::getStandardTime(char *szTime, int nMaxLen)
     return nErr;
 }
 
-int ATCS::getStandardDate(char *szDate, int nMaxLen)
+int ATCS::getStandardDate(char *szDate, unsigned int nMaxLen)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1224,10 +1224,10 @@ int ATCS::alignFromLastPosition()
     return nErr;
 }
 
-void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, int size)
+void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsigned int size)
 {
     int DD, MM, SS;
-    float mm, ss;
+    double mm, ss;
 
     // convert dDeg decimal value to sDD:MM:SS
 
@@ -1261,10 +1261,10 @@ int ATCS::convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg)
     return nErr;
 }
 
-void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, int size)
+void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size)
 {
     int HH, MM;
-    float hh, mm, SSt;
+    double hh, mm, SSt;
 
     // convert Ra value to HH:MM:SS.T before passing them to the ATCS
     HH = int(dRa);

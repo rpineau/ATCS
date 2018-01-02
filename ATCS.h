@@ -77,19 +77,19 @@ public:
     void setSleeper(SleeperInterface *pSleeper) { m_pSleeper = pSleeper;};
 
     int getNbSlewRates();
-    int getRateName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize);
+    int getRateName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize);
 
     
-    int getFirmwareVersion(char *version, int strMaxLen);
-    int getModel(char *model, int strMaxLen);
+    int getFirmwareVersion(char *version, unsigned int strMaxLen);
+    int getModel(char *model, unsigned int strMaxLen);
 
     int getRaAndDec(double &dRa, double &dDec);
     int syncTo(double dRa, double dDec);
     int isSynced(bool &bSyncked);
-    int getAlignementType(char *szType, int nMaxLEn);
+    int getAlignementType(char *szType, unsigned int nMaxLEn);
     int setAlignementType(char *szType);
     int getNbAlignementType();
-    int getAlignementTypeName(int nZeroBasedIndex, char *pszOut, int nOutMaxSize);
+    int getAlignementTypeName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize);
 
     int setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr);
     int getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &dTrackDecArcSecPerHr);
@@ -97,7 +97,7 @@ public:
     int startSlewTo(double dRa, double dDec);
     int isSlewToComplete(bool &bComplete);
 
-    int startOpenSlew(const MountDriverInterface::MoveDir Dir, int nRate);
+    int startOpenSlew(const MountDriverInterface::MoveDir Dir, unsigned int nRate);
     int stopOpenLoopMove();
 
     int gotoPark(double dRa, double dDEc);
@@ -112,11 +112,11 @@ public:
 
     int getLocalTimeFormat(bool &b24h);
     int getDateFormat(bool &bDdMmYy);
-    int getStandardTime(char *szTime, int nMaxLen);
-    int getStandardDate(char *szDate, int nMaxLen);
+    int getStandardTime(char *szTime, unsigned int nMaxLen);
+    int getStandardDate(char *szDate, unsigned int nMaxLen);
     int syncTime();
     int syncDate();
-    int getSiteName(char *szSiteName, int nMaxSize);
+    int getSiteName(char *szSiteName, unsigned int nMaxSize);
     int setSiteData(double dLongitude, double dLatitute, double dTimeZone);
 
     int GetTopActiveFault(char *szFault, int nMaxLen);
@@ -151,14 +151,14 @@ private:
     bool    m_bTimeSetOnce;
     MountDriverInterface::MoveDir      m_nOpenLoopDir;
 
-    int     ATCSSendCommand(const char *pszCmd, char *pszResult, int nResultMaxLen);
-    int     ATCSreadResponse(unsigned char *pszRespBuffer, int bufferLen);
+    int     ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen);
+    int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen);
     int     atclEnter();
     int     disablePacketSeqChecking();
     int     checkSiteTimeDateSetOnce(bool &bSet);
 
     int     getUsingSiteNumber(int &nSiteNb);
-    int     getUsingSiteName(int nSiteNb, char *szSiteName, int nMaxSize);
+    int     getUsingSiteName(int nSiteNb, char *szSiteName, unsigned int nMaxSize);
     int     setSiteLongitude(int nSiteNb, const char *szLongitude);
     int     setSiteLatitude(int nSiteNb, const char *szLatitude);
     int     setSiteTimezone(int nSiteNb, const char *szTimezone);
@@ -179,10 +179,10 @@ private:
     int     getCustomTRateOffsetRA(double &dTrackRaArcSecPerHr);
     int     getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr);
 
-    void    convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, int size);
+    void    convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsigned int size);
     int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);
     
-    void    convertRaToHHMMSSt(double dRa, char *szResult, int size);
+    void    convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size);
     int     convertHHMMSStToRa(const char *szStrRa, double &dRa);
 
     int     parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator);
