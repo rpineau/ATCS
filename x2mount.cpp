@@ -706,6 +706,7 @@ int X2Mount::trackingOff()
 bool X2Mount::needsRefactionAdjustments(void)
 {
     bool bEnabled;
+
     if(!m_bLinked)
         return false;
 
@@ -713,7 +714,8 @@ bool X2Mount::needsRefactionAdjustments(void)
 
     // check if ATCS refraction adjustment is on.
     mATCS.getRefractionCorrEnabled(bEnabled);
-    return bEnabled;
+
+    return !bEnabled; // if enabled in ATCS, don't ask TSX to do it.
 }
 
 #pragma mark - Parking Interface
