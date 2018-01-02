@@ -102,9 +102,11 @@ public:
 
     int gotoPark(double dRa, double dDEc);
     int markParkPosition();
-    int unPark();
     int getAtPark(bool &bParked);
+    int unPark();
 
+    int getRefractionCorrEnabled(bool &bEnabled);
+    int setRefractionCorrEnabled(bool bEnable);
 
     int Abort();
 
@@ -177,7 +179,7 @@ private:
     int     getCustomTRateOffsetRA(double &dTrackRaArcSecPerHr);
     int     getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr);
 
-    void    convertDecDegToDDMMSS(double dDeg, char *szResult, int size);
+    void    convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, int size);
     int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);
     
     void    convertRaToHHMMSSt(double dRa, char *szResult, int size);

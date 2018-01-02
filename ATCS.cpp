@@ -369,6 +369,7 @@ int ATCS::setTarget(double dRa, double dDec)
     char szCmd[SERIAL_BUFFER_SIZE];
     char szResp[SERIAL_BUFFER_SIZE];
     char szTemp[SERIAL_BUFFER_SIZE];
+    char cSign;
 
 #ifdef ATCS_DEBUG
     ltime = time(NULL);
@@ -393,16 +394,16 @@ int ATCS::setTarget(double dRa, double dDec)
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStr%s;", szTemp);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
-    convertDecDegToDDMMSS(dDec, szTemp, SERIAL_BUFFER_SIZE);
+    convertDecDegToDDMMSS(dDec, szTemp, cSign, SERIAL_BUFFER_SIZE);
 #ifdef ATCS_DEBUG
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::syncTo] Dec : %s\n", timestamp, szTemp);
+    fprintf(Logfile, "[%s] [ATCS::syncTo] Dec : %c%s\n", timestamp, cSign, szTemp);
     fflush(Logfile);
 #endif
     // set target dec
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStd%s;", szTemp);
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStd%c%s;", cSign,szTemp);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
     return nErr;
@@ -816,6 +817,39 @@ int ATCS::unPark()
 }
 
 
+int ATCS::getRefractionCorrEnabled(bool &bEnabled)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    bEnabled = false;
+    nErr = ATCSSendCommand("!PGre;", szResp, SERIAL_BUFFER_SIZE);
+    if(strncmp(szResp,"Yes",SERIAL_BUFFER_SIZE) == 0) {
+        bEnabled = true;
+    }
+    return nErr;
+}
+
+int ATCS::setRefractionCorrEnabled(bool bEnable)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    if(!m_bIsConnected)
+        return NOT_CONNECTED;
+    if(bEnable) {
+        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!PSreYes;");
+    }
+    else  {
+        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!PSreNo;");
+    }
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
+}
+
+
 int ATCS::Abort()
 {
     int nErr = ATCS_OK;
@@ -910,6 +944,8 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
     char szLat[SERIAL_BUFFER_SIZE];
     char szTimeZone[SERIAL_BUFFER_SIZE];
     char szHH[3], szMM[3];
+    char cSignLong;
+    char cSignLat;
 #ifdef ATCS_DEBUG
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
@@ -920,8 +956,8 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
     fflush(Logfile);
 #endif
 
-    convertDecDegToDDMMSS(dLongitude, szLong, SERIAL_BUFFER_SIZE);
-    convertDecDegToDDMMSS(dLatitute, szLat, SERIAL_BUFFER_SIZE);
+    convertDecDegToDDMMSS(dLongitude, szLong, cSignLong, SERIAL_BUFFER_SIZE);
+    convertDecDegToDDMMSS(dLatitute, szLat, cSignLat, SERIAL_BUFFER_SIZE);
     snprintf(szHH,3,"%02d", int(fabs(dTimeZone)));
     snprintf(szMM,3,"%02d", int((fabs(dTimeZone) - int(fabs(dTimeZone)))) * 100);
     if(dTimeZone<0) {
@@ -934,21 +970,17 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
         snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "00:00");
 
     // Set the W/E
-    if(dLongitude<=0) {
-        strncpy(szLong,szLong+1,SERIAL_BUFFER_SIZE); // skip the sign
-        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sE", szLong);
-    }
-    else if (dTimeZone >= 0) {
-        strncpy(szLong,szLong+1,SERIAL_BUFFER_SIZE); // skip the sign
+    if(dLongitude<0) {
         snprintf(szLong, SERIAL_BUFFER_SIZE, "%sW", szLong);
+    }
+    else {
+        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sE", szLong);
     }
     // convert signed latitude to N/S
     if(dLatitute>=0) {
-        strncpy(szLat,szLat+1,SERIAL_BUFFER_SIZE); // skip thr sign
         snprintf(szLat, SERIAL_BUFFER_SIZE, "%sN", szLat);
     }
     else {
-        strncpy(szLat,szLat+1,SERIAL_BUFFER_SIZE); // skip thr sign
         snprintf(szLat, SERIAL_BUFFER_SIZE, "%sS", szLat);
     }
 
@@ -1192,9 +1224,8 @@ int ATCS::alignFromLastPosition()
     return nErr;
 }
 
-void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, int size)
+void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, int size)
 {
-    char cSign;
     int DD, MM, SS;
     float mm, ss;
 
@@ -1207,7 +1238,7 @@ void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, int size)
     MM = int(mm*60);
     ss = (mm*60) - MM;
     SS = int(ceil(ss*60));
-    snprintf(szResult, size, "%c%02d:%02d:%02d", cSign, DD, MM, SS);
+    snprintf(szResult, size, "%02d:%02d:%02d", DD, MM, SS);
 }
 
 int ATCS::convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg)

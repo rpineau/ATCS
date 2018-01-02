@@ -705,8 +705,15 @@ int X2Mount::trackingOff()
 #pragma mark - NeedsRefractionInterface
 bool X2Mount::needsRefactionAdjustments(void)
 {
-    // need to check if ATCS refraction adjustment is on.
-    return true;
+    bool bEnabled;
+    if(!m_bLinked)
+        return false;
+
+    X2MutexLocker ml(GetMutex());
+
+    // check if ATCS refraction adjustment is on.
+    mATCS.getRefractionCorrEnabled(bEnabled);
+    return bEnabled;
 }
 
 #pragma mark - Parking Interface
