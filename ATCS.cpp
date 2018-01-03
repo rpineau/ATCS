@@ -232,7 +232,8 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
         fprintf(Logfile, "[%s] [ATCS::readResponse] *pszBufPtr = 0x%02X\n", timestamp, *pszBufPtr);
         fflush(Logfile);
 #endif
-*/
+ */
+
         if (ulBytesRead !=1) {// timeout
             if (m_bDebugLog) {
                 snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSreadResponse] readFile Timeout.\n");
@@ -1003,7 +1004,7 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
 
 #pragma mark - Special commands & functions
 
-int ATCS::GetTopActiveFault(char *szFault, int nMaxLen)
+int ATCS::getTopActiveFault(char *szFault,unsigned int nMaxLen)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];

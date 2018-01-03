@@ -222,13 +222,18 @@ int X2Mount::execModalSettingsDialog(void)
 		return ERR_POINTER;
 	}
 
+    memset(szTmpBuf,0,SERIAL_BUFFER_SIZE);
+    memset(szTime,0,SERIAL_BUFFER_SIZE);
+    memset(szDate,0,SERIAL_BUFFER_SIZE);
+
     X2MutexLocker ml(GetMutex());
 
     // fill the combo box
     nNbAligmentType = mATCS.getNbAlignementType();
     for(i=0; i<nNbAligmentType; i++) {
-        mATCS.getAlignementTypeName(i, szTmpBuf, SERIAL_BUFFER_SIZE);
-        dx->comboBoxAppendString("alignmentType",szTmpBuf);
+        nErr = mATCS.getAlignementTypeName(i, szTmpBuf, SERIAL_BUFFER_SIZE);
+        if(!nErr)
+            dx->comboBoxAppendString("alignmentType",szTmpBuf);
     }
 
 	// Set values in the userinterface
@@ -239,33 +244,20 @@ int X2Mount::execModalSettingsDialog(void)
         dx->setEnabled("alignmentType",true);
         dx->setEnabled("pushButton_4",true);
 
-        mATCS.getSiteName(szTmpBuf, SERIAL_BUFFER_SIZE);
-        dx->setText("siteName", szTmpBuf);
+        nErr = mATCS.getSiteName(szTmpBuf, SERIAL_BUFFER_SIZE);
+        if(!nErr)
+            dx->setText("siteName", szTmpBuf);
 
-        mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
-        mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
-        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
-        dx->setText("time_date", szTmpBuf);
-
-
-        mATCS.GetTopActiveFault(szTmpBuf, SERIAL_BUFFER_SIZE);
-        dx->setText("activeFault", szTmpBuf);
-
-#ifdef ATCS_X2_DEBUG
-        time_t ltime;
-        char *timestamp;
-        if (LogFile) {
-            ltime = time(NULL);
-            timestamp = asctime(localtime(&ltime));
-            timestamp[strlen(timestamp) - 1] = 0;
-            fprintf(LogFile, "[%s] execModelSettingsDialog szTime : %s\n", timestamp, szTime);
-            fprintf(LogFile, "[%s] execModelSettingsDialog szDate : %s\n", timestamp, szDate);
-            fflush(LogFile);
+        nErr = mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
+        nErr |= mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        if(!nErr) {
+            snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
+            dx->setText("time_date", szTmpBuf);
         }
-#endif
 
-        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
-        dx->setPropertyString("time_date", "text", szTmpBuf);
+        nErr = mATCS.getTopActiveFault(szTmpBuf, SERIAL_BUFFER_SIZE);
+        if(!nErr)
+            dx->setText("activeFault", szTmpBuf);
     }
     else {
         dx->setText("time_date", "");
@@ -281,15 +273,14 @@ int X2Mount::execModalSettingsDialog(void)
 		return nErr;
 	
 	//Retreive values from the user interface
-	if (bPressedOK)
-	{
-        // get polar alignment type
+	if (bPressedOK) {
 	}
 	return nErr;
 }
 
 void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 {
+    int nErr;
     char szTmpBuf[SERIAL_BUFFER_SIZE];
     char szTime[SERIAL_BUFFER_SIZE];
     char szDate[SERIAL_BUFFER_SIZE];
@@ -298,8 +289,10 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
     if(!m_bLinked)
         return ;
 
-	X2MutexLocker ml(GetMutex());
-	
+    memset(szTmpBuf,0,SERIAL_BUFFER_SIZE);
+    memset(szTime,0,SERIAL_BUFFER_SIZE);
+    memset(szDate,0,SERIAL_BUFFER_SIZE);
+
 #ifdef ATCS_X2_DEBUG
 	time_t ltime;
 	char *timestamp;
@@ -312,10 +305,16 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 	}
 #endif
 	if (!strcmp(pszEvent, "on_timer")) {
-        mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
-        mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
-        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
-        uiex->setText("time_date", szTmpBuf);
+        nErr = mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
+        nErr |= mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        if(!nErr) {
+            snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
+            uiex->setText("time_date", szTmpBuf);
+        }
+        nErr = mATCS.getTopActiveFault(szTmpBuf, SERIAL_BUFFER_SIZE);
+        if(!nErr)
+            uiex->setText("activeFault", szTmpBuf);
+
 	}
 
     if (!strcmp(pszEvent, "on_pushButton_clicked")) {
@@ -326,12 +325,14 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
     }
 
     if (!strcmp(pszEvent, "on_pushButton_2_clicked")) {
-        mATCS.syncTime();
-        mATCS.syncDate();
-        mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
-        mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
-        snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
-        uiex->setPropertyString("time_date", "text", szTmpBuf);
+        nErr = mATCS.syncTime();
+        nErr |= mATCS.syncDate();
+        nErr |= mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
+        nErr |= mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        if(!nErr) {
+            snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
+            uiex->setPropertyString("time_date", "text", szTmpBuf);
+        }
     }
 
     if (!strcmp(pszEvent, "on_pushButton_3_clicked")) {
@@ -719,14 +720,34 @@ bool X2Mount::needsRefactionAdjustments(void)
 }
 
 #pragma mark - Parking Interface
-bool X2Mount::isParked(void) {
+bool X2Mount::isParked(void)
+{
+    int nErr;
+    bool bTrackingOn;
+    bool bIsPArked;
+    double dTrackRaArcSecPerHr, dTrackDecArcSecPerHr;
 
     if(!m_bLinked)
         return false;
 
     X2MutexLocker ml(GetMutex());
-    mATCS.getAtPark(m_bParked);
+    nErr = mATCS.getAtPark(bIsPArked);
+    if(nErr)
+        return false;
 
+    if(!bIsPArked) // not parked
+        return false;
+
+    // get tracking state.
+    nErr = mATCS.getTrackRates(bTrackingOn, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
+    if(nErr)
+        return false;
+
+    // if AtPark and tracking is off, then we're parked, if not then we're unparked.
+    if(bIsPArked && !bTrackingOn)
+        m_bParked = true;
+    else
+        m_bParked = false;
     return m_bParked;
 }
 
@@ -792,41 +813,80 @@ int X2Mount::endPark(void)
     return SB_OK;
 }
 
-int		X2Mount::startUnpark(void)
+int X2Mount::startUnpark(void)
 {
     int nErr = SB_OK;
 
+    X2MutexLocker ml(GetMutex());
+
+    nErr = siderealTrackingOn();
+    if(nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] startUnpark siderealTrackingOn failled !\n", timestamp);
+            fflush(LogFile);
+        }
+#endif
+
+    }
     nErr = mATCS.unPark();
     if(nErr)
         nErr = ERR_CMDFAILED;
+    m_bParked = false;
     return nErr;
 }
 
-/*!Called to monitor the unpark process.  \param bComplete Set to true if the unpark is complete, otherwise set to false.*/
+/*!Called to monitor the unpark process.
+ \param bComplete Set to true if the unpark is complete, otherwise set to false.
+*/
 int X2Mount::isCompleteUnpark(bool& bComplete) const
 {
     int nErr;
     bool bIsPArked;
+    bool bTrackingOn;
+    double dTrackRaArcSecPerHr, dTrackDecArcSecPerHr;
+
     if(!m_bLinked)
         return ERR_NOLINK;
 
     X2Mount* pMe = (X2Mount*)this;
     X2MutexLocker ml(pMe ->GetMutex());
 
-    bComplete = true;
-    pMe->m_bParked = false;
+    bComplete = false;
+
     nErr = pMe->mATCS.getAtPark(bIsPArked);
     if(nErr)
         nErr = ERR_CMDFAILED;
 
-    if(bIsPArked) {
+    if(!bIsPArked) { // no longer parked.
+        bComplete = true;
+        pMe->m_bParked = false;
+        return nErr;
+    }
+
+    // if we're still at the park position
+    // get tracking state. If tracking is off, then we're parked, if not then we're unparked.
+    nErr = pMe->mATCS.getTrackRates(bTrackingOn, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
+    if(nErr)
+        nErr = ERR_CMDFAILED;
+
+    if(bTrackingOn) {
+        bComplete = true;
+        pMe->m_bParked = false;
+    }
+    else {
         bComplete = false;
         pMe->m_bParked = true;
     }
 	return SB_OK;
 }
 
-/*!Called once the unpark is complete.	This is called once for every corresponding startUnpark() allowing software implementations of unpark.*/
+/*!Called once the unpark is complete.
+ This is called once for every corresponding startUnpark() allowing software implementations of unpark.
+ */
 int		X2Mount::endUnpark(void)
 {
 	return SB_OK;

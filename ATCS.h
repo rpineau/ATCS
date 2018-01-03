@@ -119,7 +119,7 @@ public:
     int getSiteName(char *szSiteName, unsigned int nMaxSize);
     int setSiteData(double dLongitude, double dLatitute, double dTimeZone);
 
-    int GetTopActiveFault(char *szFault, int nMaxLen);
+    int getTopActiveFault(char *szFault, unsigned int nMaxLen);
 
 private:
 
