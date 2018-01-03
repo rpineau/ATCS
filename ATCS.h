@@ -37,9 +37,6 @@
 #endif
 #endif
 
-
-// Next turns string charcter representing a HEX code into a number
-#define HEX(c) (((c) < 'A')?((c)-'0'):((c) - 'A') + 10)
 enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, ATCS_ERROR};
 
 #define SERIAL_BUFFER_SIZE 256
@@ -58,9 +55,7 @@ enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPO
 #define ATCS_ALIGNEMENT_NAME_LENGHT 12
 
 
-
-
-// Define Class for ATCS
+// Define Class for Astrometric Instruments ATCS controller.
 class ATCS
 {
 public:
@@ -85,7 +80,7 @@ public:
 
     int getRaAndDec(double &dRa, double &dDec);
     int syncTo(double dRa, double dDec);
-    int isSynced(bool &bSyncked);
+    int isAligned(bool &bAligned);
     int getAlignementType(char *szType, unsigned int nMaxLEn);
     int setAlignementType(char *szType);
     int getNbAlignementType();
@@ -141,11 +136,8 @@ private:
 
 	double  m_dGotoRATarget;						  // Current Target RA;
 	double  m_dGotoDECTarget;                      // Current Goto Target Dec;
-	bool    m_bGotoInProgress;						  // Is GOTO in progress?
-	bool    m_bParkInProgress;						  // Is a park in progress?
 	
     bool    m_bJNOW;
-    bool    m_bAligned;
     bool    m_b24h;
     bool    m_bDdMmYy;
     bool    m_bTimeSetOnce;

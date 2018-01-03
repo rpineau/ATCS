@@ -5,12 +5,9 @@ ATCS::ATCS()
 {
 
 	m_bIsConnected = false;
-	m_bGotoInProgress = false;
-	m_bParkInProgress = false;
 
     m_bDebugLog = true;
     m_bJNOW = false;
-    m_bAligned = false;
 
     m_b24h = false;
     m_bDdMmYy = false;
@@ -145,8 +142,10 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
     int nErr = ATCS_OK;
     unsigned char szResp[SERIAL_BUFFER_SIZE];
     unsigned long ulBytesWrite;
+    bool resp_ok = false;
 
     m_pSerx->purgeTxRx();
+
     if (m_bDebugLog) {
         snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSSendCommand] Sending %s\n",pszCmd);
         m_pLogger->out(m_szLogBuffer);
@@ -169,20 +168,25 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSSendCommand] Getting response.\n");
         m_pLogger->out(m_szLogBuffer);
     }
-    nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE);
-    if(nErr) {
+    while(!resp_ok){
+        nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE);
+        if(nErr) {
 
 #ifdef ATCS_DEBUG
-        ltime = time(NULL);
-        timestamp = asctime(localtime(&ltime));
-        timestamp[strlen(timestamp) - 1] = 0;
-        if(szResp[0] == ATCL_NACK )
-            fprintf(Logfile, "[%s] [ATCS::ATCSSendCommand] ERROR reading response , ATCL_NACK received\n", timestamp);
-        else
-            fprintf(Logfile, "[%s] [ATCS::ATCSSendCommand] error %d reading response : %s\n", timestamp, nErr, szResp);
-        fflush(Logfile);
+            ltime = time(NULL);
+            timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            if(szResp[0] == ATCL_NACK )
+                fprintf(Logfile, "[%s] [ATCS::ATCSSendCommand] ERROR reading response , ATCL_NACK received\n", timestamp);
+            else
+                fprintf(Logfile, "[%s] [ATCS::ATCSSendCommand] error %d reading response : %s\n", timestamp, nErr, szResp);
+            fflush(Logfile);
 #endif
-        return nErr;
+            return nErr;
+        }
+        if(szResp[0] != 0x9A && szResp[0] !=0x9B && szResp[0] !=0x9C) { // filter out async status
+            resp_ok = true;
+        }
     }
     if(pszResult)
         strncpy(pszResult, (const char *)szResp, nResultMaxLen);
@@ -343,7 +347,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
-        fprintf(Logfile, "[%s] [ATCS::getRaAndDec] Not synced yet\n", timestamp);
+        fprintf(Logfile, "[%s] [ATCS::getRaAndDec] Not aligned yet\n", timestamp);
         fflush(Logfile);
 #endif
         dRa = 0.0f;
@@ -416,7 +420,7 @@ int ATCS::syncTo(double dRa, double dDec)
     int nErr = ATCS_OK;
     bool bAligned;
 
-    nErr = isSynced(bAligned);
+    nErr = isAligned(bAligned);
     if(nErr)
         return nErr;
 
@@ -452,30 +456,24 @@ int ATCS::calFromTargetRA_Dec()
 }
 
 
-int ATCS::isSynced(bool &bSyncked)
+int ATCS::isAligned(bool &bAligned)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
-
-    if(m_bAligned) {
-        bSyncked = m_bAligned;
-        return nErr;
-    }
 
     nErr = ATCSSendCommand("!AGas;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
 
     if(strncmp(szResp,"NotAligned",SERIAL_BUFFER_SIZE) == 0)
-        bSyncked = false;
+        bAligned = false;
     else if(strncmp(szResp,"Preliminary",SERIAL_BUFFER_SIZE) == 0)
-        bSyncked = false;
+        bAligned = false;
     else if(strncmp(szResp,"Complete",SERIAL_BUFFER_SIZE) == 0)
-        bSyncked = true;
+        bAligned = true;
     else
-        bSyncked = false;
+        bAligned = false;
 
-    m_bAligned = bSyncked;
     return nErr;
 }
 
@@ -638,7 +636,7 @@ int ATCS::startSlewTo(double dRa, double dDec)
     int nErr = ATCS_OK;
     bool bAligned;
 
-    nErr = isSynced(bAligned);
+    nErr = isAligned(bAligned);
     if(nErr)
         return nErr;
 
@@ -813,7 +811,53 @@ int ATCS::getAtPark(bool &bParked)
 int ATCS::unPark()
 {
     int nErr = ATCS_OK;
-    nErr = alignFromLastPosition();
+    bool bAligned;
+
+    // are we aligned ?
+    nErr = isAligned(bAligned);
+    if(nErr) {
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::unPark] Error getting alignement status\n", timestamp);
+        fflush(Logfile);
+#endif
+
+        return nErr;
+    }
+
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::unPark] bAligned = %s \n", timestamp, bAligned?"true":"false");
+    fflush(Logfile);
+#endif
+
+    // if not
+    if(!bAligned) {
+        nErr = alignFromLastPosition();
+        if(nErr) {
+#ifdef ATCS_DEBUG
+            ltime = time(NULL);
+            timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(Logfile, "[%s] [ATCS::unPark] Error aligning to last position\n", timestamp);
+            fflush(Logfile);
+#endif
+        }
+    }
+    nErr = setTrackingRates(true, true, 0, 0);
+    if(nErr) {
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::unPark] Error setting track rate to Sidereal\n", timestamp);
+        fflush(Logfile);
+#endif
+    }
     return nErr;
 }
 
@@ -889,7 +933,6 @@ int ATCS::syncTime()
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSst%s;", szTemp);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
     getStandardTime(m_szTime, SERIAL_BUFFER_SIZE);
-    m_bAligned = false; // changing time void alignement
 
     return nErr;
 }
@@ -920,7 +963,6 @@ int ATCS::syncDate()
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
     getStandardDate(m_szDate, SERIAL_BUFFER_SIZE);
-    m_bAligned = false; // changing date void alignement
     return nErr;
 }
 

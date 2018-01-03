@@ -25,18 +25,6 @@
 #include "../../licensedinterfaces/unparkinterface.h"
 
 
-// Forward declare the interfaces that the this driver is "given" by TheSkyX
-class SerXInterface;
-class TheSkyXFacadeForDriversInterface;
-class NeedsRefractionInterface;
-class SleeperInterface;
-class BasicIniUtilInterface;
-class LoggerInterface;
-class MutexInterface;
-class AbstractSyncMount;
-class AsymmetricalEquatorialInterface;
-class TickCountInterface;
-
 // Include files for ATCS mount
 #include "ATCS.h"
 
@@ -46,11 +34,6 @@ class TickCountInterface;
 #define CHILD_KEY_PORT_NAME "PortName"
 #define MAX_PORT_NAME_SIZE 120
 
-#define NSLEWSPEEDS 7
-#define MAXSLEWNAMESIZE 20
-#define NGUIDESPEEDS 4
-
-#include <cstdio>
 
 #define ATCS_X2_DEBUG    // Define this to have log files
 
@@ -234,7 +217,7 @@ private:
 	// Variables for ATCS Driver
 	ATCS mATCS;
 
-    bool        m_bLinked;
+    bool m_bLinked;
 
 	bool m_bSynced;
 	bool m_bParked;
@@ -242,10 +225,7 @@ private:
 	char m_PortName[MAX_PORT_NAME_SIZE];
 	
 	int m_CurrentRateIndex;
-	char SlewSpeedNames[NSLEWSPEEDS][MAXSLEWNAMESIZE];
-	double SlewSpeeds[NSLEWSPEEDS];
-	char GuideSpeedNames[NGUIDESPEEDS][MAXSLEWNAMESIZE];
-	
+
     void portNameOnToCharPtr(char* pszPort, const unsigned int& nMaxSize) const;
 
 #ifdef ATCS_X2_DEBUG

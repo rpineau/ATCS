@@ -181,6 +181,8 @@ int X2Mount::endOpenLoopMove(void)
 int X2Mount::rateCountOpenLoopMove(void) const
 {
     X2Mount* pMe = (X2Mount*)this;
+
+    X2MutexLocker ml(pMe->GetMutex());
 	return pMe->mATCS.getNbSlewRates();
 }
 
@@ -591,7 +593,18 @@ bool X2Mount::isSynced(void)
         return false;
 
     X2MutexLocker ml(GetMutex());
-    mATCS.isSynced(m_bSynced);
+
+    mATCS.isAligned(m_bSynced);
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] isSynced Called : m_bSynced = %s\n", timestamp, m_bSynced?"true":"false");
+        fflush(LogFile);
+    }
+#endif
 
     return m_bSynced;
 }
@@ -606,19 +619,20 @@ int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates,
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
-#ifdef ATCS_X2_DEBUG
-	if (LogFile) {
-		time_t ltime = time(NULL);
-		char *timestamp = asctime(localtime(&ltime));
-		timestamp[strlen(timestamp) - 1] = 0;
-        fprintf(LogFile, "[%s] setTrackingRates Called. Tracking On: %d , Ra rate : %f , Dec rate: %f\n", timestamp, bTrackingOn, dRaRateArcSecPerSec, dDecRateArcSecPerSec);
-        fflush(LogFile);
-	}
-#endif
+
     dTrackRaArcSecPerHr = dRaRateArcSecPerSec * 3600;
     dTrackDecArcSecPerHr = dDecRateArcSecPerSec * 3600;
 
     nErr = mATCS.setTrackingRates(bTrackingOn, bIgnoreRates, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] setTrackingRates Called. Tracking On: %s , Ra rate : %f , Dec rate: %f\n", timestamp, bTrackingOn?"true":"false", dRaRateArcSecPerSec, dDecRateArcSecPerSec);
+        fflush(LogFile);
+    }
+#endif
     if(nErr)
         return ERR_CMDFAILED;
 
@@ -636,7 +650,6 @@ int X2Mount::trackingRates(bool& bTrackingOn, double& dRaRateArcSecPerSec, doubl
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
-
 
     nErr = mATCS.getTrackRates(bTrackingOn, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
     if(nErr)
@@ -665,6 +678,7 @@ int X2Mount::siderealTrackingOn()
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
+
 #ifdef ATCS_X2_DEBUG
     if (LogFile) {
         time_t ltime = time(NULL);
@@ -688,6 +702,7 @@ int X2Mount::trackingOff()
         return ERR_NOLINK;
 
     X2MutexLocker ml(GetMutex());
+
 #ifdef ATCS_X2_DEBUG
     if (LogFile) {
         time_t ltime = time(NULL);
@@ -731,6 +746,7 @@ bool X2Mount::isParked(void)
         return false;
 
     X2MutexLocker ml(GetMutex());
+
     nErr = mATCS.getAtPark(bIsPArked);
     if(nErr)
         return false;
@@ -760,6 +776,7 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
         return ERR_NOLINK;
 	
 	X2MutexLocker ml(GetMutex());
+
 	nErr = m_pTheSkyXForMounts->HzToEq(dAz, dAlt, dRa, dDec);
     if (nErr) {
         return nErr;
@@ -789,7 +806,9 @@ int X2Mount::isCompletePark(bool& bComplete) const
 
     if(!m_bLinked)
         return ERR_NOLINK;
+
     X2Mount* pMe = (X2Mount*)this;
+
     X2MutexLocker ml(pMe ->GetMutex());
 
 #ifdef ATCS_X2_DEBUG
@@ -819,22 +838,19 @@ int X2Mount::startUnpark(void)
 
     X2MutexLocker ml(GetMutex());
 
-    nErr = siderealTrackingOn();
+    nErr = mATCS.unPark();
     if(nErr) {
 #ifdef ATCS_X2_DEBUG
         if (LogFile) {
             time_t ltime = time(NULL);
             char *timestamp = asctime(localtime(&ltime));
             timestamp[strlen(timestamp) - 1] = 0;
-            fprintf(LogFile, "[%s] startUnpark siderealTrackingOn failled !\n", timestamp);
+            fprintf(LogFile, "[%s] startUnpark : mATCS.unPark() failled !\n", timestamp);
             fflush(LogFile);
         }
 #endif
-
-    }
-    nErr = mATCS.unPark();
-    if(nErr)
         nErr = ERR_CMDFAILED;
+    }
     m_bParked = false;
     return nErr;
 }
@@ -845,7 +861,7 @@ int X2Mount::startUnpark(void)
 int X2Mount::isCompleteUnpark(bool& bComplete) const
 {
     int nErr;
-    bool bIsPArked;
+    bool bIsParked;
     bool bTrackingOn;
     double dTrackRaArcSecPerHr, dTrackDecArcSecPerHr;
 
@@ -853,15 +869,16 @@ int X2Mount::isCompleteUnpark(bool& bComplete) const
         return ERR_NOLINK;
 
     X2Mount* pMe = (X2Mount*)this;
+
     X2MutexLocker ml(pMe ->GetMutex());
 
     bComplete = false;
 
-    nErr = pMe->mATCS.getAtPark(bIsPArked);
+    nErr = pMe->mATCS.getAtPark(bIsParked);
     if(nErr)
         nErr = ERR_CMDFAILED;
 
-    if(!bIsPArked) { // no longer parked.
+    if(!bIsParked) { // no longer parked.
         bComplete = true;
         pMe->m_bParked = false;
         return nErr;
