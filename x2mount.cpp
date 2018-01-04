@@ -989,6 +989,9 @@ int X2Mount::startUnpark(void)
 {
     int nErr = SB_OK;
 
+    if(!m_bLinked)
+        return ERR_NOLINK;
+
     X2MutexLocker ml(GetMutex());
 
     nErr = mATCS.unPark();

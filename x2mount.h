@@ -48,7 +48,7 @@
 #endif
 
 #if defined(SB_WIN_BUILD)
-#define DEF_PORT_NAME					"COM3"
+#define DEF_PORT_NAME					"COM1"
 #elif defined(SB_LINUX_BUILD)
 #define DEF_PORT_NAME					"/dev/mount"
 #elif defined (SB_MAC_BUILD)
