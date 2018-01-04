@@ -23,7 +23,7 @@
 #include "../../licensedinterfaces/mount/trackingratesinterface.h"
 #include "../../licensedinterfaces/parkinterface.h"
 #include "../../licensedinterfaces/unparkinterface.h"
-
+#include "../../licensedinterfaces/driverslewstoparkpositioninterface.h"
 
 // Include files for ATCS mount
 #include "ATCS.h"
@@ -73,7 +73,8 @@ class X2Mount : public MountDriverInterface
 						,public ParkInterface
 						,public UnparkInterface
 						,public ModalSettingsDialogInterface, public X2GUIEventInterface
-                        ,public SerialPortParams2Interface
+                        ,public SerialPortParams2Interface,
+                        public DriverSlewsToParkPositionInterface
 {
 public:
 	/*!Standard X2 constructor*/

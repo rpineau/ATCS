@@ -157,7 +157,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
     unsigned long ulBytesWrite;
     bool resp_ok = false;
 
-    m_pSerx->purgeTxRx();
+    // m_pSerx->purgeTxRx();  // <=== can't do this because of async messages.
 
     if (m_bDebugLog) {
         snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSSendCommand] Sending %s\n",pszCmd);
@@ -182,7 +182,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         m_pLogger->out(m_szLogBuffer);
     }
     
-    while(!resp_ok){
+    while(!resp_ok) {
         nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE);
         if(nErr) {
 
@@ -203,7 +203,9 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         if(szResp[0] == 0x9A ||     // ATCL_STATUS
            szResp[0] == 0x9B ||     // ATCL_WARNING
            szResp[0] == 0x9C ||     // ATCL_ALERT
-           szResp[0] == 0x9D        // ATCL_INTERNAL_ERROR
+           szResp[0] == 0x9D ||     // ATCL_INTERNAL_ERROR
+           szResp[0] == 0x9E ||     // ??
+           szResp[0] == 0x9F        // ???
            ) {
 #ifdef ATCS_DEBUG
             ltime = time(NULL);
@@ -225,7 +227,8 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
             }
             resp_ok = true;
         }
-    }
+    } // end while(!resp_ok)
+
     if(pszResult)
         strncpy(pszResult, (const char *)szResp, nResultMaxLen);
 
@@ -266,7 +269,7 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
             }
             return nErr;
         }
-/*
+
 #ifdef ATCS_DEBUG
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
@@ -274,7 +277,7 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
         fprintf(Logfile, "[%s] [ATCS::readResponse] *pszBufPtr = 0x%02X\n", timestamp, *pszBufPtr);
         fflush(Logfile);
 #endif
- */
+
 
         if (ulBytesRead !=1) {// timeout
             if (m_bDebugLog) {

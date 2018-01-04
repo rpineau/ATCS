@@ -104,6 +104,8 @@ int X2Mount::queryAbstraction(const char* pszName, void** ppVal)
         *ppVal = dynamic_cast<UnparkInterface*>(this);
     else if (!strcmp(pszName, SerialPortParams2Interface_Name))
         *ppVal = dynamic_cast<SerialPortParams2Interface*>(this);
+    else if (!strcmp(pszName, DriverSlewsToParkPositionInterface_Name))
+        *ppVal = dynamic_cast<DriverSlewsToParkPositionInterface*>(this);
 	return SB_OK;
 }
 
