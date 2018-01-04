@@ -65,8 +65,10 @@ int ATCS::Connect(char *pszPort)
     atclEnter();
     disablePacketSeqChecking();
 
+#ifndef ATCS_DEBUG
     // disable any async message from the controller
     setAsyncUpdateEnabled(false);
+#endif
     m_bJNOW = true;
     setEpochOfEntry("Now");
 
@@ -200,12 +202,11 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         }
 
         // filter out async status and log them in debug mode
-        if(szResp[0] == 0x9A ||     // ATCL_STATUS
-           szResp[0] == 0x9B ||     // ATCL_WARNING
-           szResp[0] == 0x9C ||     // ATCL_ALERT
-           szResp[0] == 0x9D ||     // ATCL_INTERNAL_ERROR
-           szResp[0] == 0x9E ||     // ??
-           szResp[0] == 0x9F        // ???
+        if(szResp[0] == ATCL_STATUS ||
+           szResp[0] == ATCL_WARNING ||
+           szResp[0] == ATCL_ALERT ||
+           szResp[0] == ATCL_INTERNAL_ERROR ||
+           szResp[0] == ATCL_IDC_ASYNCH
            ) {
 #ifdef ATCS_DEBUG
             ltime = time(NULL);
@@ -216,7 +217,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
 #endif
         }
         else {
-            if(szResp[0] == 0x9E) { // not async but we need to log it
+            if(szResp[0] == ATCL_SYNTAX_ERROR) { // not async but we need to log it
 #ifdef ATCS_DEBUG
                 ltime = time(NULL);
                 timestamp = asctime(localtime(&ltime));
@@ -416,6 +417,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
         return nErr;
     }
     nErr = convertDDMMSSToDecDeg(szResp, dDec);
+
     return nErr;
 }
 
