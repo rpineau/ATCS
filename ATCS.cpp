@@ -404,7 +404,17 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
     nErr = ATCSSendCommand("!CGde;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
-
+    if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE) == 0) {
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::getRaAndDec] Not aligned yet\n", timestamp);
+        fflush(Logfile);
+#endif
+        dDec = 0.0f;
+        return nErr;
+    }
     nErr = convertDDMMSSToDecDeg(szResp, dDec);
     return nErr;
 }

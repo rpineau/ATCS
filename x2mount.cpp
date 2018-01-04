@@ -192,9 +192,18 @@ int X2Mount::rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* psz
 {
     int nErr = SB_OK;
     nErr = mATCS.getRateName(nZeroBasedIndex, pszOut, nOutMaxSize);
-    if(nErr)
+    if(nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] rateNameFromIndexOpenLoopMove ERROR %d\n", timestamp, nErr);
+            fflush(LogFile);
+        }
+#endif
         return ERR_CMDFAILED;
-
+    }
     return nErr;
 }
 
@@ -473,10 +482,10 @@ int X2Mount::raDec(double& ra, double& dec, const bool& bCached)
         char *timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
         fprintf(LogFile, "[%s] raDec Called. Ra : %f , Dec : %f \n", timestamp, ra, dec);
+        fprintf(LogFile, "[%s] nErr = %d \n", timestamp, nErr);
         fflush(LogFile);
     }
 #endif
-
 
 	return nErr;
 }
@@ -502,6 +511,16 @@ int X2Mount::abort()
     nErr = mATCS.Abort();
     if(nErr)
         nErr = ERR_CMDFAILED;
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] Abort nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
 
     return nErr;
 }
@@ -529,7 +548,17 @@ int X2Mount::startSlewTo(const double& dRa, const double& dDec)
     if(nErr)
         return ERR_CMDFAILED;
 
-	return nErr;
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] startSlewTo nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
+
+    return nErr;
 }
 
 int X2Mount::isCompleteSlewTo(bool& bComplete) const
@@ -544,6 +573,16 @@ int X2Mount::isCompleteSlewTo(bool& bComplete) const
     nErr = pMe->mATCS.isSlewToComplete(bComplete);
     if(nErr)
         return ERR_CMDFAILED;
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] isCompleteSlewTo nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
 
 	return nErr;
 }
@@ -586,17 +625,29 @@ int X2Mount::syncMount(const double& ra, const double& dec)
     if(nErr)
         nErr = ERR_CMDFAILED;
 
-	return nErr;
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] syncMount nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
+
+    return nErr;
 }
 
 bool X2Mount::isSynced(void)
 {
+    int nErr;
+
     if(!m_bLinked)
         return false;
 
     X2MutexLocker ml(GetMutex());
 
-    mATCS.isAligned(m_bSynced);
+   nErr = mATCS.isAligned(m_bSynced);
 
 #ifdef ATCS_X2_DEBUG
     if (LogFile) {
@@ -604,6 +655,7 @@ bool X2Mount::isSynced(void)
         char *timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
         fprintf(LogFile, "[%s] isSynced Called : m_bSynced = %s\n", timestamp, m_bSynced?"true":"false");
+        fprintf(LogFile, "[%s] isSynced nErr = %d \n", timestamp, nErr);
         fflush(LogFile);
     }
 #endif
@@ -638,6 +690,16 @@ int X2Mount::setTrackingRates(const bool& bTrackingOn, const bool& bIgnoreRates,
     if(nErr)
         return ERR_CMDFAILED;
 
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] setTrackingRates nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
+
     return nErr;
 	
 }
@@ -654,9 +716,18 @@ int X2Mount::trackingRates(bool& bTrackingOn, double& dRaRateArcSecPerSec, doubl
     X2MutexLocker ml(GetMutex());
 
     nErr = mATCS.getTrackRates(bTrackingOn, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
-    if(nErr)
+    if(nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] trackingRates  mATCS.getTrackRates nErr = %d \n", timestamp, nErr);
+            fflush(LogFile);
+        }
+#endif
         return ERR_CMDFAILED;
-
+    }
     dRaRateArcSecPerSec = dTrackRaArcSecPerHr / 3600;
     dDecRateArcSecPerSec = dTrackDecArcSecPerHr / 3600;
 
@@ -694,6 +765,17 @@ int X2Mount::siderealTrackingOn()
     nErr = setTrackingRates( true, true, 0.0, 0.0);
     if(nErr)
         return ERR_CMDFAILED;
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] siderealTrackingOn nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
+
     return nErr;
 }
 
@@ -716,7 +798,18 @@ int X2Mount::trackingOff()
 #endif
     nErr = setTrackingRates( false, true, 0.0, 0.0);
     if(nErr)
-        return ERR_CMDFAILED;
+        nErr = ERR_CMDFAILED;
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] trackingOff nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
+
     return nErr;
 }
 
@@ -724,6 +817,7 @@ int X2Mount::trackingOff()
 bool X2Mount::needsRefactionAdjustments(void)
 {
     bool bEnabled;
+    int nErr;
 
     if(!m_bLinked)
         return false;
@@ -731,7 +825,17 @@ bool X2Mount::needsRefactionAdjustments(void)
     X2MutexLocker ml(GetMutex());
 
     // check if ATCS refraction adjustment is on.
-    mATCS.getRefractionCorrEnabled(bEnabled);
+    nErr = mATCS.getRefractionCorrEnabled(bEnabled);
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] needsRefactionAdjustments nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
 
     return !bEnabled; // if enabled in ATCS, don't ask TSX to do it.
 }
@@ -750,17 +854,35 @@ bool X2Mount::isParked(void)
     X2MutexLocker ml(GetMutex());
 
     nErr = mATCS.getAtPark(bIsPArked);
-    if(nErr)
+    if(nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] isParked mATCS.getAtPark nErr = %d \n", timestamp, nErr);
+            fflush(LogFile);
+        }
+#endif
         return false;
-
+    }
     if(!bIsPArked) // not parked
         return false;
 
     // get tracking state.
     nErr = mATCS.getTrackRates(bTrackingOn, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
-    if(nErr)
+    if(nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] isParked mATCS.getTrackRates nErr = %d \n", timestamp, nErr);
+            fflush(LogFile);
+        }
+#endif
         return false;
-
+    }
     // if AtPark and tracking is off, then we're parked, if not then we're unparked.
     if(bIsPArked && !bTrackingOn)
         m_bParked = true;
@@ -781,6 +903,15 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
 
 	nErr = m_pTheSkyXForMounts->HzToEq(dAz, dAlt, dRa, dDec);
     if (nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] startPark  m_pTheSkyXForMounts->HzToEq nErr = %d \n", timestamp, nErr);
+            fflush(LogFile);
+        }
+#endif
         return nErr;
     }
 
@@ -796,7 +927,17 @@ int X2Mount::startPark(const double& dAz, const double& dAlt)
     // goto park
     nErr = mATCS.gotoPark(dRa, dDec);
     if(nErr)
-        return ERR_CMDFAILED;
+        nErr = ERR_CMDFAILED;
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] startPark  mATCS.gotoPark nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
 
 	return nErr;
 }
@@ -825,6 +966,16 @@ int X2Mount::isCompletePark(bool& bComplete) const
     nErr = pMe->mATCS.getAtPark(bComplete);
     if(nErr)
         nErr = ERR_CMDFAILED;
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] isCompletePark  mATCS.getAtPark nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
 
 	return nErr;
 }
@@ -877,9 +1028,18 @@ int X2Mount::isCompleteUnpark(bool& bComplete) const
     bComplete = false;
 
     nErr = pMe->mATCS.getAtPark(bIsParked);
-    if(nErr)
+    if(nErr) {
+#ifdef ATCS_X2_DEBUG
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] isCompleteUnpark  mATCS.getAtPark nErr = %d \n", timestamp, nErr);
+            fflush(LogFile);
+        }
+#endif
         nErr = ERR_CMDFAILED;
-
+    }
     if(!bIsParked) { // no longer parked.
         bComplete = true;
         pMe->m_bParked = false;
@@ -891,6 +1051,15 @@ int X2Mount::isCompleteUnpark(bool& bComplete) const
     nErr = pMe->mATCS.getTrackRates(bTrackingOn, dTrackRaArcSecPerHr, dTrackDecArcSecPerHr);
     if(nErr)
         nErr = ERR_CMDFAILED;
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] isCompleteUnpark  mATCS.getTrackRates nErr = %d \n", timestamp, nErr);
+        fflush(LogFile);
+    }
+#endif
 
     if(bTrackingOn) {
         bComplete = true;
