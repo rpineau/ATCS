@@ -42,6 +42,8 @@ ATCS::~ATCS(void)
 int ATCS::Connect(char *pszPort)
 {
     int nErr = ATCS_OK;
+    bool bIsParked;
+    bool bIsAligned;
 
 #ifdef ATCS_DEBUG
 	ltime = time(NULL);
@@ -82,11 +84,22 @@ int ATCS::Connect(char *pszPort)
         nErr = syncDate();
     }
 
-    // do we need to set the location Long. Lat. ?
-    // 
-    // do we need to set the timezone ?
-    // read park location
-    
+    // are we parked ?
+    getAtPark(bIsParked);
+    if(!bIsParked) {
+        // are we aligned ?
+        isAligned(bIsAligned);
+        if(bIsAligned) { // if aligned, resume tracking
+#ifdef ATCS_DEBUG
+            ltime = time(NULL);
+            timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(Logfile, "[%s] ATCS::Connect Not parked but aligned, resuming sidereal tracking.\n", timestamp);
+            fflush(Logfile);
+#endif
+            setTrackingRates(true, true, 0, 0);
+        }
+    }
     return SB_OK;
 }
 
@@ -168,6 +181,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSSendCommand] Getting response.\n");
         m_pLogger->out(m_szLogBuffer);
     }
+    
     while(!resp_ok){
         nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE);
         if(nErr) {
@@ -184,7 +198,31 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
 #endif
             return nErr;
         }
-        if(szResp[0] != 0x9A && szResp[0] !=0x9B && szResp[0] !=0x9C) { // filter out async status
+
+        // filter out async status and log them in debug mode
+        if(szResp[0] == 0x9A ||     // ATCL_STATUS
+           szResp[0] == 0x9B ||     // ATCL_WARNING
+           szResp[0] == 0x9C ||     // ATCL_ALERT
+           szResp[0] == 0x9D        // ATCL_INTERNAL_ERROR
+           ) {
+#ifdef ATCS_DEBUG
+            ltime = time(NULL);
+            timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(Logfile, "[%s] [ATCS::ATCSSendCommand] Async message : %s\n", timestamp, szResp+1);
+            fflush(Logfile);
+#endif
+        }
+        else {
+            if(szResp[0] == 0x9E) { // not async but we need to log it
+#ifdef ATCS_DEBUG
+                ltime = time(NULL);
+                timestamp = asctime(localtime(&ltime));
+                timestamp[strlen(timestamp) - 1] = 0;
+                fprintf(Logfile, "[%s] [ATCS::ATCSSendCommand] Async message : %s\n", timestamp, szResp+1);
+                fflush(Logfile);
+#endif
+            }
             resp_ok = true;
         }
     }

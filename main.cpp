@@ -12,10 +12,10 @@ extern "C" PlugInExport int sbPlugInName2(BasicStringInterface& str)
 	return 0;
 }
 
-extern "C" PlugInExport int sbPlugInFactory2(	const char* pszDisplayName, 
+extern "C" PlugInExport int sbPlugInFactory2(	const char* pszDisplayName,
 												const int& nInstanceIndex,
-												SerXInterface					* pSerXIn, 
-												TheSkyXFacadeForDriversInterface	* pTheSkyXIn, 
+												SerXInterface					* pSerXIn,
+												TheSkyXFacadeForDriversInterface	* pTheSkyXIn,
 												SleeperInterface					* pSleeperIn,
 												BasicIniUtilInterface			* pIniUtilIn,
 												LoggerInterface					* pLoggerIn,
@@ -27,10 +27,10 @@ extern "C" PlugInExport int sbPlugInFactory2(	const char* pszDisplayName,
 	X2Mount* gpMyImpl=NULL;
 
 	if (NULL == gpMyImpl)
-		gpMyImpl = new X2Mount(	pszDisplayName, 
+		gpMyImpl = new X2Mount(	pszDisplayName,
 									nInstanceIndex,
-									pSerXIn, 
-									pTheSkyXIn, 
+									pSerXIn,
+									pTheSkyXIn,
 									pSleeperIn,
 									pIniUtilIn,
 									pLoggerIn,
