@@ -22,7 +22,16 @@ X2Mount::X2Mount(const char* pszDriverSelection,
 	m_pTickCount					= pTickCount;
 	
 #ifdef ATCS_X2_DEBUG
-	LogFile = fopen(HEQ5_LOGFILENAME, "w");
+#if defined(SB_WIN_BUILD)
+    m_sLogfilePath = getenv("HOMEDRIVE");
+    m_sLogfilePath += getenv("HOMEPATH");
+    m_sLogfilePath += "\\ATCS_X2_Logfile.txt";
+#elif defined(SB_LINUX_BUILD)
+    m_sLogfilePath = "/tmp/ATCS_X2_Logfile.txtt";
+#elif defined(SB_MAC_BUILD)
+    m_sLogfilePath = "/tmp/ATCS_X2_Logfile.txt";
+#endif
+	LogFile = fopen(m_sLogfilePath.c_str(), "w");
 #endif
 	
 	
@@ -1113,16 +1122,26 @@ double X2Mount::flipHourAngle() {
 
 int X2Mount::gemLimits(double& dHoursEast, double& dHoursWest)
 {
-#ifdef ATCS_X2_DEBUG
-	if (LogFile) {
-		time_t ltime = time(NULL);
-		char *timestamp = asctime(localtime(&ltime));
-		timestamp[strlen(timestamp) - 1] = 0;
-		// fprintf(LogFile, "[%s] gemLimits called\n", timestamp);
-        fflush(LogFile);
-	}
-#endif
+    int nErr = SB_OK;
+    if(!m_bLinked)
+        return ERR_NOLINK;
 
+    X2MutexLocker ml(GetMutex());
+
+    nErr = mATCS.getLimits(dHoursEast, dHoursWest);
+
+#ifdef ATCS_X2_DEBUG
+    if (LogFile) {
+        time_t ltime = time(NULL);
+        char *timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(LogFile, "[%s] gemLimits mATCS.getLimits nErr = %d\n", timestamp, nErr);
+        fprintf(LogFile, "[%s] gemLimits dHoursEast = %f\n", timestamp, dHoursEast);
+        fprintf(LogFile, "[%s] gemLimits dHoursWest = %f\n", timestamp, dHoursWest);
+        fflush(LogFile);
+    }
+#endif
+    // temp debugging.
 	dHoursEast = 0.0;
 	dHoursWest = 0.0;
 	return SB_OK;

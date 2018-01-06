@@ -64,17 +64,17 @@
 Use this example to write an X2Mount driver.
 */
 class X2Mount : public MountDriverInterface 
-						//Optional interfaces, uncomment and implement as required.
-						,public SyncMountInterface 
+						,public SyncMountInterface
 						,public SlewToInterface
                         ,public AsymmetricalEquatorialInterface
 						,public OpenLoopMoveInterface
 						,public TrackingRatesInterface
 						,public ParkInterface
 						,public UnparkInterface
-						,public ModalSettingsDialogInterface, public X2GUIEventInterface
-                        ,public SerialPortParams2Interface,
-                        public DriverSlewsToParkPositionInterface
+						,public ModalSettingsDialogInterface
+                        ,public X2GUIEventInterface
+                        ,public SerialPortParams2Interface
+                        ,public DriverSlewsToParkPositionInterface
 {
 public:
 	/*!Standard X2 constructor*/
@@ -230,6 +230,7 @@ private:
     void portNameOnToCharPtr(char* pszPort, const unsigned int& nMaxSize) const;
 
 #ifdef ATCS_X2_DEBUG
+    std::string m_sLogfilePath;
     char *timestamp;
     time_t ltime;
 	FILE *LogFile;	  // LogFile

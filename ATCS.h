@@ -27,16 +27,6 @@
 
 #define ATCS_DEBUG 1   // define this to have log files
 
-#ifdef ATCS_DEBUG
-#if defined(SB_WIN_BUILD)
-#define ATCS_LOGFILENAME "C:\\ATCSLog.txt"
-#elif defined(SB_LINUX_BUILD)
-#define ATCS_LOGFILENAME "/tmp/ATCSLog.txt"
-#elif defined(SB_MAC_BUILD)
-#define ATCS_LOGFILENAME "/tmp/ATCSLog.txt"
-#endif
-#endif
-
 enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, ATCS_ERROR};
 
 #define SERIAL_BUFFER_SIZE 256
@@ -110,6 +100,8 @@ public:
     int getRefractionCorrEnabled(bool &bEnabled);
     int setRefractionCorrEnabled(bool bEnable);
 
+    int getLimits(double &dHoursEast, double &dHoursWest);
+
     int Abort();
 
     int getLocalTimeFormat(bool &b24h);
@@ -178,6 +170,9 @@ private:
     int     getCustomTRateOffsetRA(double &dTrackRaArcSecPerHr);
     int     getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr);
 
+    int     getSoftLimitEastAngle(double &dAngle);
+    int     getSoftLimitWestAngle(double &dAngle);
+
     void    convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsigned int size);
     int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);
     
@@ -189,7 +184,9 @@ private:
     const char m_aszSlewRateNames[ATCS_NB_SLEW_SPEEDS][ATCS_SLEW_NAME_LENGHT] = { "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4",  "Slew"};
     const char m_szAlignmentType[ATCS_NB_ALIGNEMENT_TYPE][ATCS_ALIGNEMENT_NAME_LENGHT] = { "Polar", "AltAz", "NearlyPolar", "NearlyAltAz"};
 
+
 #ifdef ATCS_DEBUG
+    std::string m_sLogfilePath;
 	// timestamp for logs
     char *timestamp;
 	time_t ltime;

@@ -15,7 +15,17 @@ ATCS::ATCS()
 
 
 #ifdef	ATCS_DEBUG
-	Logfile = fopen(ATCS_LOGFILENAME, "w");
+#if defined(SB_WIN_BUILD)
+    m_sLogfilePath = getenv("HOMEDRIVE");
+    m_sLogfilePath += getenv("HOMEPATH");
+    m_sLogfilePath += "\\ATCSLog.txt";
+#elif defined(SB_LINUX_BUILD)
+    m_sLogfilePath = "/tmp/ATCSLog.txt";
+#elif defined(SB_MAC_BUILD)
+    m_sLogfilePath = "/tmp/ATCSLog.txt";
+#endif
+
+	Logfile = fopen(m_sLogfilePath.c_str(), "w");
 	ltime = time(NULL);
 	timestamp = asctime(localtime(&ltime));
 	timestamp[strlen(timestamp) - 1] = 0;
@@ -370,6 +380,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
+
     // get RA
     nErr = ATCSSendCommand("!CGra;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr) {
@@ -383,7 +394,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
     fflush(Logfile);
 #endif
 
-    // if not yet synced we have no coordinates.
+    // if not aligned we have no coordinates.
     if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE) == 0) {
 #ifdef ATCS_DEBUG
         ltime = time(NULL);
@@ -405,6 +416,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
     nErr = ATCSSendCommand("!CGde;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
+    // even if RA was ok, we need to test Dec as we might have reach park between the 2 calls
     if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE) == 0) {
 #ifdef ATCS_DEBUG
         ltime = time(NULL);
@@ -681,8 +693,53 @@ int ATCS::getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr)
     return nErr;
 }
 
+#pragma mark - Limis
+int ATCS::getLimits(double &dHoursEast, double &dHoursWest)
+{
+    int nErr = ATCS_OK;
+    double dEast, dWest;
 
-#pragma mark - slew
+    nErr = getSoftLimitEastAngle(dEast);
+    if(nErr)
+        return nErr;
+
+    nErr = getSoftLimitWestAngle(dWest);
+    if(nErr)
+        return nErr;
+
+    dHoursEast = m_pTsx->hourAngle(dEast);
+    dHoursWest = m_pTsx->hourAngle(dWest);
+
+    return nErr;
+}
+
+int ATCS::getSoftLimitEastAngle(double &dAngle)
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!NGle;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    dAngle = atof(szResp);
+
+    return nErr;
+}
+
+int ATCS::getSoftLimitWestAngle(double &dAngle)
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    nErr = ATCSSendCommand("!NGlw;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    dAngle = atof(szResp);
+
+    return nErr;
+}
+
+#pragma mark - Slew
 
 int ATCS::startSlewTo(double dRa, double dDec)
 {
