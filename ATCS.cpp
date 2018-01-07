@@ -1165,6 +1165,7 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
     char szHH[3], szMM[3];
     char cSignLong;
     char cSignLat;
+
 #if defined ATCS_DEBUG && ATCS_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
@@ -1213,10 +1214,19 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
     fflush(Logfile);
 #endif
 
-    setSiteLongitude(m_nSiteNumber, szLong);
-    setSiteLatitude(m_nSiteNumber, szLat);
-    setSiteTimezone(m_nSiteNumber, szTimeZone);
+    nErr = setSiteLongitude(m_nSiteNumber, szLong);
+    nErr |= setSiteLatitude(m_nSiteNumber, szLat);
+    nErr |= setSiteTimezone(m_nSiteNumber, szTimeZone);
 
+    return nErr;
+}
+int ATCS::getSiteData(char *szLongitude, char *szLatitude, char *TimeZone, int nMaxSize)
+{
+    int nErr = ATCS_OK;
+
+    nErr = getSiteLongitude(m_nSiteNumber, szLongitude, nMaxSize);
+    nErr |= getSiteLatitude(m_nSiteNumber, szLatitude, nMaxSize);
+    nErr |= getSiteTZ(m_nSiteNumber, TimeZone, nMaxSize);
     return nErr;
 }
 
@@ -1333,6 +1343,51 @@ int ATCS::setSiteTimezone(int nSiteNb, const char *szTimezone)
 
     return nErr;
 }
+
+int ATCS::getSiteLongitude(int nSiteNb, char *szLongitude, int nMaxSize)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGo%d;", nSiteNb);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    if(!nErr) {
+        strncpy(szLongitude, szResp, nMaxSize);
+    }
+    return nErr;
+}
+
+int ATCS::getSiteLatitude(int nSiteNb, char *szLatitude, int nMaxSize)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGa%d;", nSiteNb);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    if(!nErr) {
+        strncpy(szLatitude, szResp, nMaxSize);
+    }
+
+    return nErr;
+}
+
+int ATCS::getSiteTZ(int nSiteNb, char *TimeZone, int nMaxSize)
+{
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
+    char szCmd[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGz%d;", nSiteNb);
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    if(!nErr) {
+        strncpy(TimeZone, szResp, nMaxSize);
+    }
+
+    return nErr;
+}
+
 
 #pragma mark  - Time and Date
 

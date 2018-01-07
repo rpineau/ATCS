@@ -114,7 +114,7 @@ public:
     int syncDate();
     int getSiteName(char *szSiteName, unsigned int nMaxSize);
     int setSiteData(double dLongitude, double dLatitute, double dTimeZone);
-
+    int getSiteData(char *szLongitude, char *szLatitude, char *TimeZone, int nMaxSize); // assume all buffers have the same size
     int getTopActiveFault(char *szFault, unsigned int nMaxLen);
 
 private:
@@ -156,6 +156,10 @@ private:
     int     setSiteLongitude(int nSiteNb, const char *szLongitude);
     int     setSiteLatitude(int nSiteNb, const char *szLatitude);
     int     setSiteTimezone(int nSiteNb, const char *szTimezone);
+
+    int     getSiteLongitude(int nSiteNb, char *szLongitude, int nMaxSize);
+    int     getSiteLatitude(int nSiteNb, char *szLatitude, int nMaxSize);
+    int     getSiteTZ(int nSiteNb, char *TimeZone, int nMaxSize);
 
     int     setTarget(double dRa, double dDec);
     int     setAsyncUpdateEnabled(bool bEnable);

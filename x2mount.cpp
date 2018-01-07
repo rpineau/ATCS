@@ -235,6 +235,9 @@ int X2Mount::execModalSettingsDialog(void)
     char szTmpBuf[SERIAL_BUFFER_SIZE];
     char szTime[SERIAL_BUFFER_SIZE];
     char szDate[SERIAL_BUFFER_SIZE];
+    char szLongitude[SERIAL_BUFFER_SIZE];
+    char szLatitude[SERIAL_BUFFER_SIZE];
+    char szTimeZone[SERIAL_BUFFER_SIZE];
     int nNbAligmentType;
     int i;
 	if (NULL == ui) return ERR_POINTER;
@@ -272,6 +275,19 @@ int X2Mount::execModalSettingsDialog(void)
         if(!nErr)
             dx->setText("siteName", szTmpBuf);
 
+        nErr = mATCS.getSiteData(szLongitude, szLatitude, szTimeZone, SERIAL_BUFFER_SIZE);
+        if(!nErr) {
+            dx->setText("longitude", szLongitude);
+            dx->setText("latitude", szLatitude);
+            dx->setText("timezone", szTimeZone);
+
+        }
+        else {
+            dx->setText("longitude", "");
+            dx->setText("latitude", "");
+            dx->setText("timezone", "");
+        }
+
         nErr = mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
         nErr |= mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
         if(!nErr) {
@@ -286,6 +302,9 @@ int X2Mount::execModalSettingsDialog(void)
     else {
         dx->setText("time_date", "");
         dx->setText("siteName", "");
+        dx->setText("longitude", "");
+        dx->setText("latitude", "");
+        dx->setText("timezone", "");
         dx->setEnabled("pushButton",false);
         dx->setEnabled("pushButton_2",false);
         dx->setEnabled("pushButton_3",false);
