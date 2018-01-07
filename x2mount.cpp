@@ -109,7 +109,7 @@ int X2Mount::queryAbstraction(const char* pszName, void** ppVal)
 	else if (!strcmp(pszName, UnparkInterface_Name))
 		*ppVal = dynamic_cast<UnparkInterface*>(this);
 	else if (!strcmp(pszName, LoggerInterface_Name))
-        *ppVal = dynamic_cast<UnparkInterface*>(this);
+        *ppVal = GetLogger();
     else if (!strcmp(pszName, SerialPortParams2Interface_Name))
         *ppVal = dynamic_cast<SerialPortParams2Interface*>(this);
     else if (!strcmp(pszName, DriverSlewsToParkPositionInterface_Name))
@@ -149,6 +149,7 @@ int X2Mount::startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const i
             fflush(LogFile);
         }
 #endif
+        m_pLogger->out("startOpenLoopMove ERROR");
         return ERR_CMDFAILED;
     }
     return SB_OK;
@@ -183,6 +184,7 @@ int X2Mount::endOpenLoopMove(void)
             fflush(LogFile);
         }
 #endif
+        m_pLogger->out("endOpenLoopMove ERROR");
         return ERR_CMDFAILED;
     }
     return nErr;
@@ -210,6 +212,7 @@ int X2Mount::rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* psz
             fflush(LogFile);
         }
 #endif
+        m_pLogger->out("rateNameFromIndexOpenLoopMove ERROR");
         return ERR_CMDFAILED;
     }
     return nErr;
@@ -552,18 +555,19 @@ int X2Mount::startSlewTo(const double& dRa, const double& dDec)
 	}
 #endif
     nErr = mATCS.startSlewTo(dRa, dDec);
-    if(nErr)
-        return ERR_CMDFAILED;
-
+    if(nErr) {
 #ifdef ATCS_X2_DEBUG
-    if (LogFile) {
-        time_t ltime = time(NULL);
-        char *timestamp = asctime(localtime(&ltime));
-        timestamp[strlen(timestamp) - 1] = 0;
-        fprintf(LogFile, "[%s] startSlewTo nErr = %d \n", timestamp, nErr);
-        fflush(LogFile);
-    }
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] startSlewTo nErr = %d \n", timestamp, nErr);
+            fflush(LogFile);
+        }
 #endif
+        m_pLogger->out("startSlewTo ERROR");
+        return ERR_CMDFAILED;
+    }
 
     return nErr;
 }
