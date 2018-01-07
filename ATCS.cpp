@@ -84,16 +84,18 @@ int ATCS::Connect(char *pszPort)
 
     // do we need to set the time ?
     nErr = checkSiteTimeDateSetOnce(m_bTimeSetOnce);
-    nErr = getLocalTimeFormat(m_b24h);
-    nErr = getDateFormat(m_bDdMmYy);
+    if(!nErr) {
+        nErr = getLocalTimeFormat(m_b24h);
+        nErr = getDateFormat(m_bDdMmYy);
 
-    // debug
-    getStandardTime(m_szTime, SERIAL_BUFFER_SIZE);
-    getStandardDate(m_szDate, SERIAL_BUFFER_SIZE);
+        // debug
+        getStandardTime(m_szTime, SERIAL_BUFFER_SIZE);
+        getStandardDate(m_szDate, SERIAL_BUFFER_SIZE);
 
-    if(!m_bTimeSetOnce) {
-        nErr = syncTime();
-        nErr = syncDate();
+        if(!m_bTimeSetOnce) {
+            nErr = syncTime();
+            nErr = syncDate();
+        }
     }
 
     // are we parked ?
@@ -332,6 +334,8 @@ int ATCS::atclEnter()
 
     snprintf(szCmd,SERIAL_BUFFER_SIZE, "%c", ATCL_ENTER);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    nErr = ATCSSendCommand("!QDcn;", szResp, SERIAL_BUFFER_SIZE);
 
     return nErr;
 }
@@ -891,9 +895,9 @@ int ATCS::isSlewToComplete(bool &bComplete)
 
     bComplete = false;
 
-    if(timer.GetElapsedSeconds()<1) {
+    if(timer.GetElapsedSeconds()<2) {
         // we're checking for comletion to quickly, assume it's moving for now
-        return true;
+        return nErr;
     }
 
     nErr = ATCSSendCommand("!GGgr;", szResp, SERIAL_BUFFER_SIZE);
