@@ -10,8 +10,7 @@ X2Mount::X2Mount(const char* pszDriverSelection,
 				 MutexInterface					* pIOMutex,
 				 TickCountInterface				* pTickCount)
 {
-	// Variables for HEQ5
-	
+
 	m_nPrivateMulitInstanceIndex	= nInstanceIndex;
 	m_pSerX							= pSerX;
 	m_pTheSkyXForMounts				= pTheSkyX;
@@ -552,7 +551,6 @@ int X2Mount::startSlewTo(const double& dRa, const double& dDec)
         fflush(LogFile);
 	}
 #endif
-
     nErr = mATCS.startSlewTo(dRa, dDec);
     if(nErr)
         return ERR_CMDFAILED;

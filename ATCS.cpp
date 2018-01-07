@@ -173,11 +173,6 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
 
     // m_pSerx->purgeTxRx();  // <=== can't do this because of async messages.
 
-    if (m_bDebugLog) {
-        snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSSendCommand] Sending %s\n",pszCmd);
-        m_pLogger->out(m_szLogBuffer);
-    }
-
 #ifdef ATCS_DEBUG
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
@@ -191,11 +186,6 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
     if(nErr)
         return nErr;
     // read response
-    if (m_bDebugLog) {
-        snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSSendCommand] Getting response.\n");
-        m_pLogger->out(m_szLogBuffer);
-    }
-    
     while(!resp_ok) {
         nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE);
         if(nErr) {
@@ -276,10 +266,6 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
     do {
         nErr = m_pSerx->readFile(pszBufPtr, 1, ulBytesRead, MAX_TIMEOUT);
         if(nErr) {
-            if (m_bDebugLog) {
-                snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSreadResponse] readFile error.\n");
-                m_pLogger->out(m_szLogBuffer);
-            }
             return nErr;
         }
 
@@ -294,18 +280,10 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
 */
 
         if (ulBytesRead !=1) {// timeout
-            if (m_bDebugLog) {
-                snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSreadResponse] readFile Timeout.\n");
-                m_pLogger->out(m_szLogBuffer);
-            }
             nErr = ATCS_BAD_CMD_RESPONSE;
             break;
         }
         ulTotalBytesRead += ulBytesRead;
-        if (m_bDebugLog) {
-            snprintf(m_szLogBuffer,ATCS_LOG_BUFFER_SIZE,"[ATCS::ATCSreadResponse] nBytesRead = %lu\n",ulBytesRead);
-            m_pLogger->out(m_szLogBuffer);
-        }
         // check for  errors or single ACK
         if(*pszBufPtr == ATCL_NACK) {
             nErr = ATCS_BAD_CMD_RESPONSE;
@@ -662,8 +640,9 @@ int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaA
 #endif
         nErr = setCustomTRateOffsetRA(dTrackRaArcSecPerHr);
         nErr |= setCustomTRateOffsetDec(dTrackDecArcSecPerHr);
-        if(nErr)
+        if(nErr) {
             return nErr; // if we cant set the rate no need to switch to custom.
+        }
         nErr = ATCSSendCommand("!RStrCustom;", szResp, SERIAL_BUFFER_SIZE);
     }
     return nErr;
@@ -981,7 +960,6 @@ int ATCS::unPark()
         fprintf(Logfile, "[%s] [ATCS::unPark] Error getting alignement status\n", timestamp);
         fflush(Logfile);
 #endif
-
         return nErr;
     }
 
