@@ -148,6 +148,7 @@ private:
     int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen);
     int     atclEnter();
     int     disablePacketSeqChecking();
+    int     disableStaticStatusChangeNotification();
     int     checkSiteTimeDateSetOnce(bool &bSet);
 
     int     getUsingSiteNumber(int &nSiteNb);

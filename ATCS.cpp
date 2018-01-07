@@ -74,6 +74,7 @@ int ATCS::Connect(char *pszPort)
 
     atclEnter();
     disablePacketSeqChecking();
+	disableStaticStatusChangeNotification();
 
 #ifndef ATCS_DEBUG
     // disable any async message from the controller
@@ -1202,6 +1203,16 @@ int ATCS::disablePacketSeqChecking()
 
     nErr = ATCSSendCommand("!QDps;", szResp, SERIAL_BUFFER_SIZE);
 
+    return nErr;
+}
+
+int ATCS::disableStaticStatusChangeNotification()
+{
+    int nErr;
+    char szResp[SERIAL_BUFFER_SIZE];
+    
+    nErr = ATCSSendCommand("!QDcn;", szResp, SERIAL_BUFFER_SIZE);
+    
     return nErr;
 }
 
