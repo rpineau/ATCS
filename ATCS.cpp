@@ -897,7 +897,7 @@ int ATCS::isSlewToComplete(bool &bComplete)
 
     if(timer.GetElapsedSeconds()<2) {
         // we're checking for comletion to quickly, assume it's moving for now
-        return true;
+        return nErr;
     }
 
     nErr = ATCSSendCommand("!GGgr;", szResp, SERIAL_BUFFER_SIZE);
