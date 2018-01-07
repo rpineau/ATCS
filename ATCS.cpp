@@ -891,7 +891,7 @@ int ATCS::isSlewToComplete(bool &bComplete)
 
     bComplete = false;
 
-    if(timer.GetElapsedSeconds()<1) {
+    if(timer.GetElapsedSeconds()<2) {
         // we're checking for comletion to quickly, assume it's moving for now
         return true;
     }
