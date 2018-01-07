@@ -24,6 +24,8 @@
 #include "../../licensedinterfaces/loggerinterface.h"
 #include "../../licensedinterfaces/mountdriverinterface.h"
 
+#include "StopWatch.h"
+
 
 #define ATCS_DEBUG 1   // define this to have log files
 
@@ -183,6 +185,8 @@ private:
 
     const char m_aszSlewRateNames[ATCS_NB_SLEW_SPEEDS][ATCS_SLEW_NAME_LENGHT] = { "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4",  "Slew"};
     const char m_szAlignmentType[ATCS_NB_ALIGNEMENT_TYPE][ATCS_ALIGNEMENT_NAME_LENGHT] = { "Polar", "AltAz", "NearlyPolar", "NearlyAltAz"};
+
+    CStopWatch      timer;
 
 
 #ifdef ATCS_DEBUG

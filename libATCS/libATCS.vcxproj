@@ -146,6 +146,7 @@
   <ItemGroup>
     <ClInclude Include="..\main.h" />
     <ClInclude Include="..\ATCS.h" />
+    <ClInclude Include="..\StopWatch.h" />
     <ClInclude Include="..\x2mount.h" />
   </ItemGroup>
   <ItemGroup>

@@ -281,6 +281,7 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
             return nErr;
         }
 
+/*
 #ifdef ATCS_DEBUG
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
@@ -288,7 +289,7 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
         fprintf(Logfile, "[%s] [ATCS::readResponse] *pszBufPtr = 0x%02X\n", timestamp, *pszBufPtr);
         fflush(Logfile);
 #endif
-
+*/
 
         if (ulBytesRead !=1) {// timeout
             if (m_bDebugLog) {
@@ -445,8 +446,8 @@ int ATCS::setTarget(double dRa, double dDec)
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::syncTo] Ra : %f\n", timestamp, dRa);
-    fprintf(Logfile, "[%s] [ATCS::syncTo] Dec : %f\n", timestamp, dDec);
+    fprintf(Logfile, "[%s] [ATCS::setTarget] Ra : %f\n", timestamp, dRa);
+    fprintf(Logfile, "[%s] [ATCS::setTarget] Dec : %f\n", timestamp, dDec);
     fflush(Logfile);
 #endif
 
@@ -457,7 +458,7 @@ int ATCS::setTarget(double dRa, double dDec)
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::syncTo] Ra : %s\n", timestamp, szTemp);
+    fprintf(Logfile, "[%s] [ATCS::setTarget] Ra : %s\n", timestamp, szTemp);
     fflush(Logfile);
 #endif
     // set target Ra
@@ -469,7 +470,7 @@ int ATCS::setTarget(double dRa, double dDec)
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::syncTo] Dec : %c%s\n", timestamp, cSign, szTemp);
+    fprintf(Logfile, "[%s] [ATCS::setTarget] Dec : %c%s\n", timestamp, cSign, szTemp);
     fflush(Logfile);
 #endif
     // set target dec
@@ -485,22 +486,59 @@ int ATCS::syncTo(double dRa, double dDec)
     int nErr = ATCS_OK;
     bool bAligned;
 
-    nErr = isAligned(bAligned);
-    if(nErr)
-        return nErr;
+#ifdef ATCS_DEBUG
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::syncTo] Ra : %f\n", timestamp, dRa);
+    fprintf(Logfile, "[%s] [ATCS::syncTo] Dec : %f\n", timestamp, dDec);
+    fflush(Logfile);
+#endif
 
+    nErr = isAligned(bAligned);
+    if(nErr) {
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::syncTo] isAligned nErr = %d\n", timestamp, nErr);
+        fflush(Logfile);
+#endif
+        return nErr;
+    }
     // set sync target coordinate
     nErr = setTarget(dRa, dDec);
-    if(nErr)
+    if(nErr) {
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::syncTo] setTarget nErr = %d\n", timestamp, nErr);
+        fflush(Logfile);
+#endif
         return nErr;
-
+    }
     // Sync
     if(!bAligned){
         nErr = alignFromTargetRA_DecCalcSideEpochNow();
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::syncTo] alignFromTargetRA_DecCalcSideEpochNow nErr = %d\n", timestamp, nErr);
+        fflush(Logfile);
+#endif
     }
     else {
         nErr = calFromTargetRA_DecEpochNow();
-    }
+#ifdef ATCS_DEBUG
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::syncTo] calFromTargetRA_DecEpochNow nErr = %d\n", timestamp, nErr);
+        fflush(Logfile);
+#endif
+   }
     return nErr;
 }
 
@@ -766,6 +804,7 @@ int ATCS::slewTargetRA_DecEpochNow()
 
     nErr = ATCSSendCommand("!GTrn;", szResp, SERIAL_BUFFER_SIZE);
 
+    timer.Reset();
     return nErr;
 
 }
@@ -851,6 +890,11 @@ int ATCS::isSlewToComplete(bool &bComplete)
     int nPrecentRemaining;
 
     bComplete = false;
+
+    if(timer.GetElapsedSeconds()<1) {
+        // we're checking for comletion to quickly, assume it's moving for now
+        return true;
+    }
 
     nErr = ATCSSendCommand("!GGgr;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)

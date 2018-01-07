@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		93AE6FB12002B7BC00748C07 /* StopWatch.h in Headers */ = {isa = PBXBuildFile; fileRef = 93AE6FB02002B7BC00748C07 /* StopWatch.h */; };
 		93B6BC601E62127D0050E48B /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93B6BC5A1E62127D0050E48B /* main.cpp */; };
 		93B6BC611E62127D0050E48B /* main.h in Headers */ = {isa = PBXBuildFile; fileRef = 93B6BC5B1E62127D0050E48B /* main.h */; };
 		93B6BC621E62127D0050E48B /* ATCS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 93B6BC5C1E62127D0050E48B /* ATCS.cpp */; };
@@ -18,6 +19,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		93AE6FB02002B7BC00748C07 /* StopWatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StopWatch.h; sourceTree = "<group>"; };
 		93B6BC521E62122B0050E48B /* libATCS.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libATCS.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		93B6BC5A1E62127D0050E48B /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		93B6BC5B1E62127D0050E48B /* main.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = main.h; sourceTree = "<group>"; };
@@ -62,6 +64,7 @@
 		93B6BC591E6212610050E48B /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				93AE6FB02002B7BC00748C07 /* StopWatch.h */,
 				93B6BC5A1E62127D0050E48B /* main.cpp */,
 				93B6BC5B1E62127D0050E48B /* main.h */,
 				93B6BC5C1E62127D0050E48B /* ATCS.cpp */,
@@ -90,6 +93,7 @@
 			files = (
 				93B6BC611E62127D0050E48B /* main.h in Headers */,
 				93B6BC651E62127D0050E48B /* x2mount.h in Headers */,
+				93AE6FB12002B7BC00748C07 /* StopWatch.h in Headers */,
 				93B6BC631E62127D0050E48B /* ATCS.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
