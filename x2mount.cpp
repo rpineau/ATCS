@@ -10,8 +10,7 @@ X2Mount::X2Mount(const char* pszDriverSelection,
 				 MutexInterface					* pIOMutex,
 				 TickCountInterface				* pTickCount)
 {
-	// Variables for HEQ5
-	
+
 	m_nPrivateMulitInstanceIndex	= nInstanceIndex;
 	m_pSerX							= pSerX;
 	m_pTheSkyXForMounts				= pTheSkyX;
@@ -110,7 +109,7 @@ int X2Mount::queryAbstraction(const char* pszName, void** ppVal)
 	else if (!strcmp(pszName, UnparkInterface_Name))
 		*ppVal = dynamic_cast<UnparkInterface*>(this);
 	else if (!strcmp(pszName, LoggerInterface_Name))
-        *ppVal = dynamic_cast<UnparkInterface*>(this);
+        *ppVal = GetLogger();
     else if (!strcmp(pszName, SerialPortParams2Interface_Name))
         *ppVal = dynamic_cast<SerialPortParams2Interface*>(this);
     else if (!strcmp(pszName, DriverSlewsToParkPositionInterface_Name))
@@ -150,6 +149,7 @@ int X2Mount::startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const i
             fflush(LogFile);
         }
 #endif
+        m_pLogger->out("startOpenLoopMove ERROR");
         return ERR_CMDFAILED;
     }
     return SB_OK;
@@ -184,6 +184,7 @@ int X2Mount::endOpenLoopMove(void)
             fflush(LogFile);
         }
 #endif
+        m_pLogger->out("endOpenLoopMove ERROR");
         return ERR_CMDFAILED;
     }
     return nErr;
@@ -211,6 +212,7 @@ int X2Mount::rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* psz
             fflush(LogFile);
         }
 #endif
+        m_pLogger->out("rateNameFromIndexOpenLoopMove ERROR");
         return ERR_CMDFAILED;
     }
     return nErr;
@@ -233,6 +235,9 @@ int X2Mount::execModalSettingsDialog(void)
     char szTmpBuf[SERIAL_BUFFER_SIZE];
     char szTime[SERIAL_BUFFER_SIZE];
     char szDate[SERIAL_BUFFER_SIZE];
+    char szLongitude[SERIAL_BUFFER_SIZE];
+    char szLatitude[SERIAL_BUFFER_SIZE];
+    char szTimeZone[SERIAL_BUFFER_SIZE];
     int nNbAligmentType;
     int i;
 	if (NULL == ui) return ERR_POINTER;
@@ -270,6 +275,19 @@ int X2Mount::execModalSettingsDialog(void)
         if(!nErr)
             dx->setText("siteName", szTmpBuf);
 
+        nErr = mATCS.getSiteData(szLongitude, szLatitude, szTimeZone, SERIAL_BUFFER_SIZE);
+        if(!nErr) {
+            dx->setText("longitude", szLongitude);
+            dx->setText("latitude", szLatitude);
+            dx->setText("timezone", szTimeZone);
+
+        }
+        else {
+            dx->setText("longitude", "");
+            dx->setText("latitude", "");
+            dx->setText("timezone", "");
+        }
+
         nErr = mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
         nErr |= mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
         if(!nErr) {
@@ -284,6 +302,9 @@ int X2Mount::execModalSettingsDialog(void)
     else {
         dx->setText("time_date", "");
         dx->setText("siteName", "");
+        dx->setText("longitude", "");
+        dx->setText("latitude", "");
+        dx->setText("timezone", "");
         dx->setEnabled("pushButton",false);
         dx->setEnabled("pushButton_2",false);
         dx->setEnabled("pushButton_3",false);
@@ -552,20 +573,20 @@ int X2Mount::startSlewTo(const double& dRa, const double& dDec)
         fflush(LogFile);
 	}
 #endif
-
     nErr = mATCS.startSlewTo(dRa, dDec);
-    if(nErr)
-        return ERR_CMDFAILED;
-
+    if(nErr) {
 #ifdef ATCS_X2_DEBUG
-    if (LogFile) {
-        time_t ltime = time(NULL);
-        char *timestamp = asctime(localtime(&ltime));
-        timestamp[strlen(timestamp) - 1] = 0;
-        fprintf(LogFile, "[%s] startSlewTo nErr = %d \n", timestamp, nErr);
-        fflush(LogFile);
-    }
+        if (LogFile) {
+            time_t ltime = time(NULL);
+            char *timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(LogFile, "[%s] startSlewTo nErr = %d \n", timestamp, nErr);
+            fflush(LogFile);
+        }
 #endif
+        m_pLogger->out("startSlewTo ERROR");
+        return ERR_CMDFAILED;
+    }
 
     return nErr;
 }

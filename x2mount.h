@@ -37,16 +37,6 @@
 
 #define ATCS_X2_DEBUG    // Define this to have log files
 
-#ifdef ATCS_X2_DEBUG
-#if defined(SB_WIN_BUILD)
-#define HEQ5_LOGFILENAME "C:\\ATCS_X2_Logfile.txt"
-#elif defined(SB_LINUX_BUILD)
-#define HEQ5_LOGFILENAME "/tmp/ATCS_X2_Logfile.txt"
-#elif defined (SB_MAC_BUILD)
-#define HEQ5_LOGFILENAME "/tmp/ATCS_X2_Logfile.txt"
-#endif
-#endif
-
 #if defined(SB_WIN_BUILD)
 #define DEF_PORT_NAME					"COM1"
 #elif defined(SB_LINUX_BUILD)

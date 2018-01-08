@@ -27,12 +27,12 @@
 #include "StopWatch.h"
 
 
-#define ATCS_DEBUG 1   // define this to have log files
+#define ATCS_DEBUG 1   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
 
 enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, ATCS_ERROR};
 
 #define SERIAL_BUFFER_SIZE 256
-#define MAX_TIMEOUT 5000
+#define MAX_TIMEOUT 1000
 #define ATCS_LOG_BUFFER_SIZE 256
 #define ERR_PARSE   1
 
@@ -114,7 +114,7 @@ public:
     int syncDate();
     int getSiteName(char *szSiteName, unsigned int nMaxSize);
     int setSiteData(double dLongitude, double dLatitute, double dTimeZone);
-
+    int getSiteData(char *szLongitude, char *szLatitude, char *TimeZone, int nMaxSize); // assume all buffers have the same size
     int getTopActiveFault(char *szFault, unsigned int nMaxLen);
 
 private:
@@ -148,6 +148,7 @@ private:
     int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen);
     int     atclEnter();
     int     disablePacketSeqChecking();
+    int     disableStaticStatusChangeNotification();
     int     checkSiteTimeDateSetOnce(bool &bSet);
 
     int     getUsingSiteNumber(int &nSiteNb);
@@ -155,6 +156,10 @@ private:
     int     setSiteLongitude(int nSiteNb, const char *szLongitude);
     int     setSiteLatitude(int nSiteNb, const char *szLatitude);
     int     setSiteTimezone(int nSiteNb, const char *szTimezone);
+
+    int     getSiteLongitude(int nSiteNb, char *szLongitude, int nMaxSize);
+    int     getSiteLatitude(int nSiteNb, char *szLatitude, int nMaxSize);
+    int     getSiteTZ(int nSiteNb, char *TimeZone, int nMaxSize);
 
     int     setTarget(double dRa, double dDec);
     int     setAsyncUpdateEnabled(bool bEnable);
