@@ -29,7 +29,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Setup Skywatcher</string>
+   <string>Setup ATCS</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_6">
    <item>
