@@ -112,6 +112,11 @@ int ATCS::Connect(char *pszPort)
             nErr = syncDate();
         }
     }
+    else
+    {
+        m_bIsConnected = false;
+        return ERR_CMDFAILED;
+    }
 
     // are we parked ?
     getAtPark(bIsParked);
