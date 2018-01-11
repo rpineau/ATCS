@@ -26,7 +26,7 @@ X2Mount::X2Mount(const char* pszDriverSelection,
     m_sLogfilePath += getenv("HOMEPATH");
     m_sLogfilePath += "\\ATCS_X2_Logfile.txt";
 #elif defined(SB_LINUX_BUILD)
-    m_sLogfilePath = "/tmp/ATCS_X2_Logfile.txtt";
+    m_sLogfilePath = "/tmp/ATCS_X2_Logfile.txt";
 #elif defined(SB_MAC_BUILD)
     m_sLogfilePath = "/tmp/ATCS_X2_Logfile.txt";
 #endif
@@ -862,7 +862,8 @@ bool X2Mount::needsRefactionAdjustments(void)
         time_t ltime = time(NULL);
         char *timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
-        fprintf(LogFile, "[%s] needsRefactionAdjustments nErr = %d \n", timestamp, nErr);
+        fprintf(LogFile, "[%s] getRefractionCorrEnabled nErr = %d \n", timestamp, nErr);
+        fprintf(LogFile, "[%s] getRefractionCorrEnabled bEnabled = %s\n", timestamp, bEnabled?"true":"false");
         fflush(LogFile);
     }
 #endif
