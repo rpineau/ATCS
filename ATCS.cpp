@@ -20,9 +20,11 @@ ATCS::ATCS()
     m_sLogfilePath += getenv("HOMEPATH");
     m_sLogfilePath += "\\ATCSLog.txt";
 #elif defined(SB_LINUX_BUILD)
-    m_sLogfilePath = "/tmp/ATCSLog.txt";
+    m_sLogfilePath = getenv("HOME");
+    m_sLogfilePath += "/ATCSLog.txt";
 #elif defined(SB_MAC_BUILD)
-    m_sLogfilePath = "/tmp/ATCSLog.txt";
+    m_sLogfilePath = getenv("HOME");
+    m_sLogfilePath += "/ATCSLog.txt";
 #endif
 	Logfile = fopen(m_sLogfilePath.c_str(), "w");
 #endif
