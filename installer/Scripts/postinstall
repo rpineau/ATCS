@@ -29,7 +29,7 @@ else
 	PLUGINS_DIR="PlugIns"
 fi
 
-echo "installing in $TheSkyX_Path/Resources/Common/$PLUGINS_DIR/MountPlugIns/"
+echo "Installing in $TheSkyX_Path/Resources/Common/$PLUGINS_DIR/MountPlugIns/"
 
 mkdir -p "$TheSkyX_Path/Resources/Common/$PLUGINS_DIR/MountPlugIns/"
 
