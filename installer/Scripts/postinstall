@@ -31,8 +31,6 @@ fi
 
 echo "Installing in $TheSkyX_Path/Resources/Common/$PLUGINS_DIR/MountPlugIns/"
 
-mkdir -p "$TheSkyX_Path/Resources/Common/$PLUGINS_DIR/MountPlugIns/"
-
 cp -f "/tmp/ATCS_X2/mountlist ATCS.txt" "$TheSkyX_Path/Resources/Common/Miscellaneous Files/"
 cp -f "/tmp/ATCS_X2/ATCS.ui" "$TheSkyX_Path/Resources/Common/$PLUGINS_DIR/MountPlugIns/"
 cp -f "/tmp/ATCS_X2/Astrometric.png" "$TheSkyX_Path/Resources/Common/$PLUGINS_DIR/MountPlugIns/"
