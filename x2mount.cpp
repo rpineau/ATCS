@@ -26,9 +26,11 @@ X2Mount::X2Mount(const char* pszDriverSelection,
     m_sLogfilePath += getenv("HOMEPATH");
     m_sLogfilePath += "\\ATCS_X2_Logfile.txt";
 #elif defined(SB_LINUX_BUILD)
-    m_sLogfilePath = "/tmp/ATCS_X2_Logfile.txt";
+    m_sLogfilePath = getenv("HOME");
+    m_sLogfilePath += "/ATCS_X2_Logfile.txt";
 #elif defined(SB_MAC_BUILD)
-    m_sLogfilePath = "/tmp/ATCS_X2_Logfile.txt";
+    m_sLogfilePath = getenv("HOME");
+    m_sLogfilePath += "/ATCS_X2_Logfile.txt";
 #endif
 	LogFile = fopen(m_sLogfilePath.c_str(), "w");
 #endif

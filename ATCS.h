@@ -144,6 +144,11 @@ private:
     bool    m_bTimeSetOnce;
     MountDriverInterface::MoveDir      m_nOpenLoopDir;
 
+    // limits don't change mid-course so we cache them
+    bool    m_bLimitCached;
+    double  m_dHoursEast;
+    double  m_dHoursWest;
+    
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen);
     int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen);
     int     atclEnter();

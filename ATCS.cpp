@@ -12,7 +12,7 @@ ATCS::ATCS()
     m_b24h = false;
     m_bDdMmYy = false;
     m_bTimeSetOnce = false;
-
+    m_bLimitCached = false;
 
 #ifdef ATCS_DEBUG
 #if defined(SB_WIN_BUILD)
@@ -20,9 +20,11 @@ ATCS::ATCS()
     m_sLogfilePath += getenv("HOMEPATH");
     m_sLogfilePath += "\\ATCSLog.txt";
 #elif defined(SB_LINUX_BUILD)
-    m_sLogfilePath = "/tmp/ATCSLog.txt";
+    m_sLogfilePath = getenv("HOME");
+    m_sLogfilePath += "/ATCSLog.txt";
 #elif defined(SB_MAC_BUILD)
-    m_sLogfilePath = "/tmp/ATCSLog.txt";
+    m_sLogfilePath = getenv("HOME");
+    m_sLogfilePath += "/ATCSLog.txt";
 #endif
 	Logfile = fopen(m_sLogfilePath.c_str(), "w");
 #endif
@@ -134,6 +136,8 @@ int ATCS::Connect(char *pszPort)
             setTrackingRates(true, true, 0, 0);
         }
     }
+    m_bLimitCached = false;
+
     return SB_OK;
 }
 
@@ -162,6 +166,8 @@ int ATCS::Disconnect(void)
         }
     }
 	m_bIsConnected = false;
+    m_bLimitCached = false;
+
 	return SB_OK;
 }
 
@@ -759,6 +765,12 @@ int ATCS::getLimits(double &dHoursEast, double &dHoursWest)
     int nErr = ATCS_OK;
     double dEast, dWest;
 
+    if(m_bLimitCached) {
+        dHoursEast = m_dHoursEast;
+        dHoursWest = m_dHoursWest;
+        return nErr;
+    }
+
     nErr = getSoftLimitEastAngle(dEast);
     if(nErr)
         return nErr;
@@ -770,6 +782,9 @@ int ATCS::getLimits(double &dHoursEast, double &dHoursWest)
     dHoursEast = m_pTsx->hourAngle(dEast);
     dHoursWest = m_pTsx->hourAngle(dWest);
 
+    m_bLimitCached = true;
+    m_dHoursEast = dHoursEast;
+    m_dHoursWest = dHoursWest;
     return nErr;
 }
 
@@ -947,7 +962,7 @@ int ATCS::isSlewToComplete(bool &bComplete)
     return nErr;
 }
 
-int ATCS::gotoPark(double dRa, double dDEc)
+int ATCS::gotoPark(double dRa, double dDec)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
