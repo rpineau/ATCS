@@ -28,7 +28,6 @@
 // Include files for ATCS mount
 #include "ATCS.h"
 
-#define DRIVER_VERSION 1.00;
 
 #define PARENT_KEY			"ATCSMount"
 #define CHILD_KEY_PORT_NAME "PortName"
@@ -135,9 +134,8 @@ public:
     virtual double flipHourAngle();
     virtual int gemLimits(double& dHoursEast, double& dHoursWest);
 
-	// Leave the following functions as virtual since we don't use them - the defaults are fine.
-	// virtual double flipHourAngle();
-	// virtual int gemLimits(double& dHoursEast, double& dHoursWest);
+    // SymmetricalEquatorialInterface
+    virtual MountTypeInterface::Type mountType();
 	
 	//OpenLoopMoveInterface
 	virtual int								startOpenLoopMove(const MountDriverInterface::MoveDir& Dir, const int& nRateIndex);
@@ -175,7 +173,7 @@ public:
     virtual bool            isBaudRateFixed() const        {return true;}
 
     virtual SerXInterface::Parity    parity() const                {return SerXInterface::B_NOPARITY;}
-    virtual void                    setParity(const SerXInterface::Parity& parity){parity;};
+    virtual void                    setParity(const SerXInterface::Parity& parity){};
     virtual bool                    isParityFixed() const        {return true;}
 
 	// GUI Interface

@@ -33,6 +33,7 @@ ATCS::ATCS()
     ltime = time(NULL);
 	timestamp = asctime(localtime(&ltime));
 	timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::ATCS] Version %3.2f build 2020_06_25_1040.\n", timestamp, DRIVER_VERSION);
 	fprintf(Logfile, "[%s] ATCS New Constructor Called\n", timestamp);
     fflush(Logfile);
 #endif
@@ -385,6 +386,16 @@ int ATCS::getModel(char *pszModel, unsigned int nStrMaxLen)
 
 
 #pragma mark - Mount Coordinates
+void ATCS::setMountMode(MountTypeInterface::Type mountType)
+{
+    m_mountType = mountType;
+}
+
+MountTypeInterface::Type ATCS::mountType()
+{
+    return m_mountType;
+}
+
 
 int ATCS::getRaAndDec(double &dRa, double &dDec)
 {

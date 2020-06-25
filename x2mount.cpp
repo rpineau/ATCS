@@ -52,6 +52,17 @@ X2Mount::X2Mount(const char* pszDriverSelection,
 	{
 	}
 
+    if(strstr(pszDriverSelection,"Fork")) {
+        mATCS.setMountMode(MountTypeInterface::Symmetrical_Equatorial);
+    }
+    else if(strstr(pszDriverSelection,"Equatorial")) {
+         mATCS.setMountMode(MountTypeInterface::Asymmetrical_Equatorial);
+     }
+     else {
+         mATCS.setMountMode(MountTypeInterface::AltAz);
+     }
+
+    
 }
 
 X2Mount::~X2Mount()
@@ -1169,6 +1180,11 @@ int X2Mount::gemLimits(double& dHoursEast, double& dHoursWest)
 	dHoursEast = 0.0;
 	dHoursWest = 0.0;
 	return SB_OK;
+}
+
+MountTypeInterface::Type X2Mount::mountType()
+{
+    return  mATCS.mountType();
 }
 
 
