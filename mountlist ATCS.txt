@@ -1,3 +1,5 @@
 //See hardwarelist.txt for details on this file format.
 //Version|Manufacturer|Model|Comment|MapsTo|PlugInDllName|X2Developer|Windows|Mac|Linux|
-2|Astrometric Instruments|ATCS mount controller|X2 plugin for ATCS Mount controller| |libATCS||1|1|1|
+2|Astrometric Instruments|ATCS mount controller Equatorial|X2 plugin for ATCS Mount controller on equatorial mount| |libATCS||1|1|1|
+2|Astrometric Instruments|ATCS mount controller Equatorial Fork|X2 plugin for ATCS Mount controller on fork mount in equatorial mode| |libATCS||1|1|1|
+2|Astrometric Instruments|ATCS mount controller Alt-Az|X2 plugin for ATCS Mount controller on Alt-Az mount| |libATCS||1|1|1|

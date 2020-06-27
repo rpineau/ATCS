@@ -35,10 +35,16 @@ echo "Installing in $PLUGINS_DIR/MountPlugIns/"
 
 cp -f "/tmp/ATCS_X2/mountlist ATCS.txt" "$TheSkyX_Path/Resources/Common/Miscellaneous Files/"
 if [ "$?" -ne "0" ]; then exit 1; fi
+
+rm -f "$PLUGINS_DIR/MountPlugIns/ATCS.ui"
 cp -f "/tmp/ATCS_X2/ATCS.ui" "$PLUGINS_DIR/MountPlugIns/"
 if [ "$?" -ne "0" ]; then exit 1; fi
+
+rm -f "$PLUGINS_DIR/MountPlugIns/Astrometric.png"
 cp -f "/tmp/ATCS_X2/Astrometric.png" "$PLUGINS_DIR/MountPlugIns/"
 if [ "$?" -ne "0" ]; then exit 1; fi
+
+rm -f "$PLUGINS_DIR/MountPlugIns/libATCS.dylib"
 cp -f "/tmp/ATCS_X2/libATCS.dylib" "$PLUGINS_DIR/MountPlugIns/"
 if [ "$?" -ne "0" ]; then exit 1; fi
 

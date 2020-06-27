@@ -23,11 +23,13 @@
 #include "../../licensedinterfaces/serxinterface.h"
 #include "../../licensedinterfaces/loggerinterface.h"
 #include "../../licensedinterfaces/mountdriverinterface.h"
+#include "../../licensedinterfaces/mount/asymmetricalequatorialinterface.h"
 
 #include "StopWatch.h"
 
 
 #define ATCS_DEBUG 1   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
+#define DRIVER_VERSION 1.10;
 
 enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, ATCS_ERROR};
 
@@ -72,10 +74,12 @@ public:
 
     int getNbSlewRates();
     int getRateName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize);
-
     
     int getFirmwareVersion(char *version, unsigned int strMaxLen);
     int getModel(char *model, unsigned int strMaxLen);
+
+    void    setMountMode(MountTypeInterface::Type mountType);
+    MountTypeInterface::Type mountType();
 
     int getRaAndDec(double &dRa, double &dDec);
     int syncTo(double dRa, double dDec);
@@ -130,6 +134,8 @@ private:
 	bool    m_bIsConnected;                               // Connected to the mount?
     char    m_szFirmwareVersion[SERIAL_BUFFER_SIZE];
 
+    MountTypeInterface::Type    m_mountType;
+    
     char    m_szHardwareModel[SERIAL_BUFFER_SIZE];
     char    m_szTime[SERIAL_BUFFER_SIZE];
     char    m_szDate[SERIAL_BUFFER_SIZE];
@@ -151,6 +157,8 @@ private:
     
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen);
     int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen);
+
+
     int     atclEnter();
     int     disablePacketSeqChecking();
     int     disableStaticStatusChangeNotification();
