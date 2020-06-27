@@ -388,6 +388,14 @@ int ATCS::getModel(char *pszModel, unsigned int nStrMaxLen)
 #pragma mark - Mount Coordinates
 void ATCS::setMountMode(MountTypeInterface::Type mountType)
 {
+    #if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::setMountMode] mountType = %d\n", timestamp, mountType);
+        fflush(Logfile);
+    #endif
+    
     m_mountType = mountType;
 }
 
