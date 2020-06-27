@@ -28,7 +28,7 @@
 #include "StopWatch.h"
 
 
-#define ATCS_DEBUG 1   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
+// #define ATCS_DEBUG 1   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
 #define DRIVER_VERSION 1.10;
 
 enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, ATCS_ERROR};
