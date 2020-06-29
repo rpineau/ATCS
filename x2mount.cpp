@@ -52,17 +52,22 @@ X2Mount::X2Mount(const char* pszDriverSelection,
 	{
 	}
 
+    // set mount alignement type and meridian avoidance mode.
     if(strstr(pszDriverSelection,"Fork")) {
         mATCS.setMountMode(MountTypeInterface::Symmetrical_Equatorial);
+        mATCS.setAlignementType("Polar");
+        mATCS.setMeridianAvoidMethod("Lower");
     }
     else if(strstr(pszDriverSelection,"Equatorial")) {
          mATCS.setMountMode(MountTypeInterface::Asymmetrical_Equatorial);
+         mATCS.setAlignementType("Polar");
+         mATCS.setMeridianAvoidMethod("Full(GEM)");
      }
      else {
          mATCS.setMountMode(MountTypeInterface::AltAz);
+         mATCS.setAlignementType("AltAz");
+         mATCS.setMeridianAvoidMethod("Lower");
      }
-
-    
 }
 
 X2Mount::~X2Mount()
@@ -214,7 +219,9 @@ int X2Mount::rateCountOpenLoopMove(void) const
 int X2Mount::rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* pszOut, const int& nOutMaxSize)
 {
     int nErr = SB_OK;
-    nErr = mATCS.getRateName(nZeroBasedIndex, pszOut, nOutMaxSize);
+    std::string sTmp;
+    
+    nErr = mATCS.getRateName(nZeroBasedIndex, sTmp);
     if(nErr) {
 #ifdef ATCS_X2_DEBUG
         if (LogFile) {
@@ -228,6 +235,7 @@ int X2Mount::rateNameFromIndexOpenLoopMove(const int& nZeroBasedIndex, char* psz
         m_pLogger->out("rateNameFromIndexOpenLoopMove ERROR");
         return ERR_CMDFAILED;
     }
+    strncpy(pszOut, sTmp.c_str(), nOutMaxSize);
     return nErr;
 }
 
@@ -245,14 +253,12 @@ int X2Mount::execModalSettingsDialog(void)
 	X2GUIInterface*					ui = uiutil.X2UI();
 	X2GUIExchangeInterface*			dx = NULL;//Comes after ui is loaded
 	bool bPressedOK = false;
-    char szTmpBuf[SERIAL_BUFFER_SIZE];
-    char szTime[SERIAL_BUFFER_SIZE];
-    char szDate[SERIAL_BUFFER_SIZE];
-    char szLongitude[SERIAL_BUFFER_SIZE];
-    char szLatitude[SERIAL_BUFFER_SIZE];
-    char szTimeZone[SERIAL_BUFFER_SIZE];
-    int nNbAligmentType;
-    int i;
+    std::string sTmp;
+    std::string sTime;
+    std::string sDate;
+    std::string sLongitude;
+    std::string sLatitude;
+    std::string sTimeZone;
 	if (NULL == ui) return ERR_POINTER;
 	
 	if ((nErr = ui->loadUserInterface("ATCS.ui", deviceType(), m_nPrivateMulitInstanceIndex)))
@@ -262,19 +268,7 @@ int X2Mount::execModalSettingsDialog(void)
 		return ERR_POINTER;
 	}
 
-    memset(szTmpBuf,0,SERIAL_BUFFER_SIZE);
-    memset(szTime,0,SERIAL_BUFFER_SIZE);
-    memset(szDate,0,SERIAL_BUFFER_SIZE);
-
     X2MutexLocker ml(GetMutex());
-
-    // fill the combo box
-    nNbAligmentType = mATCS.getNbAlignementType();
-    for(i=0; i<nNbAligmentType; i++) {
-        nErr = mATCS.getAlignementTypeName(i, szTmpBuf, SERIAL_BUFFER_SIZE);
-        if(!nErr)
-            dx->comboBoxAppendString("alignmentType",szTmpBuf);
-    }
 
 	// Set values in the userinterface
     if(m_bLinked) {
@@ -284,16 +278,15 @@ int X2Mount::execModalSettingsDialog(void)
         dx->setEnabled("alignmentType",true);
         dx->setEnabled("pushButton_4",true);
 
-        nErr = mATCS.getSiteName(szTmpBuf, SERIAL_BUFFER_SIZE);
+        nErr = mATCS.getSiteName(sTmp);
         if(!nErr)
-            dx->setText("siteName", szTmpBuf);
+            dx->setText("siteName", sTmp.c_str());
 
-        nErr = mATCS.getSiteData(szLongitude, szLatitude, szTimeZone, SERIAL_BUFFER_SIZE);
+        nErr = mATCS.getSiteData(sLongitude, sLatitude, sTimeZone);
         if(!nErr) {
-            dx->setText("longitude", szLongitude);
-            dx->setText("latitude", szLatitude);
-            dx->setText("timezone", szTimeZone);
-
+            dx->setText("longitude", sLongitude.c_str());
+            dx->setText("latitude", sLatitude.c_str());
+            dx->setText("timezone", sTimeZone.c_str());
         }
         else {
             dx->setText("longitude", "");
@@ -301,16 +294,16 @@ int X2Mount::execModalSettingsDialog(void)
             dx->setText("timezone", "");
         }
 
-        nErr = mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
-        nErr |= mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        nErr = mATCS.getStandardTime(sTime);
+        nErr |= mATCS.getStandardDate(sDate);
         if(!nErr) {
-            snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
-            dx->setText("time_date", szTmpBuf);
+            sTmp =sDate + " - " + sTime;
+            dx->setText("time_date", sTmp.c_str());
         }
 
-        nErr = mATCS.getTopActiveFault(szTmpBuf, SERIAL_BUFFER_SIZE);
+        nErr = mATCS.getTopActiveFault(sTmp);
         if(!nErr)
-            dx->setText("activeFault", szTmpBuf);
+            dx->setText("activeFault", sTmp.c_str());
     }
     else {
         dx->setText("time_date", "");
@@ -337,17 +330,12 @@ int X2Mount::execModalSettingsDialog(void)
 void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 {
     int nErr;
-    char szTmpBuf[SERIAL_BUFFER_SIZE];
-    char szTime[SERIAL_BUFFER_SIZE];
-    char szDate[SERIAL_BUFFER_SIZE];
-    int nCurrentAlignmentIndex = 0;
+    std::string sTmpBuf;
+    std::string sTime;
+    std::string sDate;
 
     if(!m_bLinked)
         return ;
-
-    memset(szTmpBuf,0,SERIAL_BUFFER_SIZE);
-    memset(szTime,0,SERIAL_BUFFER_SIZE);
-    memset(szDate,0,SERIAL_BUFFER_SIZE);
 
 #ifdef ATCS_X2_DEBUG
 	time_t ltime;
@@ -361,15 +349,15 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
 	}
 #endif
 	if (!strcmp(pszEvent, "on_timer")) {
-        nErr = mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
-        nErr |= mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        nErr = mATCS.getStandardTime(sTime);
+        nErr |= mATCS.getStandardDate(sDate);
         if(!nErr) {
-            snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
-            uiex->setText("time_date", szTmpBuf);
+            sTmpBuf = sDate + " - " + sTime;
+            uiex->setText("time_date", sTmpBuf.c_str());
         }
-        nErr = mATCS.getTopActiveFault(szTmpBuf, SERIAL_BUFFER_SIZE);
+        nErr = mATCS.getTopActiveFault(sTmpBuf);
         if(!nErr)
-            uiex->setText("activeFault", szTmpBuf);
+            uiex->setText("activeFault", sTmpBuf.c_str());
 
 	}
 
@@ -383,22 +371,16 @@ void X2Mount::uiEvent(X2GUIExchangeInterface* uiex, const char* pszEvent)
     if (!strcmp(pszEvent, "on_pushButton_2_clicked")) {
         nErr = mATCS.syncTime();
         nErr |= mATCS.syncDate();
-        nErr |= mATCS.getStandardTime(szTime, SERIAL_BUFFER_SIZE);
-        nErr |= mATCS.getStandardDate(szDate, SERIAL_BUFFER_SIZE);
+        nErr |= mATCS.getStandardTime(sTime);
+        nErr |= mATCS.getStandardDate(sDate);
         if(!nErr) {
-            snprintf(szTmpBuf, SERIAL_BUFFER_SIZE, "%s  -  %s", szDate, szTime);
-            uiex->setPropertyString("time_date", "text", szTmpBuf);
+            sTmpBuf = sDate + " - " + sTime;
+            uiex->setPropertyString("time_date", "text", sTmpBuf.c_str());
         }
     }
 
     if (!strcmp(pszEvent, "on_pushButton_3_clicked")) {
         mATCS.markParkPosition();
-    }
-
-    if (!strcmp(pszEvent, "on_pushButton_4_clicked")) {
-        nCurrentAlignmentIndex = uiex->currentIndex("alignmentType");
-        mATCS.getAlignementTypeName(nCurrentAlignmentIndex, szTmpBuf, SERIAL_BUFFER_SIZE);
-        mATCS.setAlignementType(szTmpBuf);
     }
 
 	return;
@@ -464,9 +446,9 @@ void X2Mount::deviceInfoNameShort(BasicStringInterface& str) const
     if(m_bLinked) {
         X2Mount* pMe = (X2Mount*)this;
         X2MutexLocker ml(pMe->GetMutex());
-        char cModel[SERIAL_BUFFER_SIZE];
-        pMe->mATCS.getModel(cModel, SERIAL_BUFFER_SIZE);
-        str = cModel;
+        std::string sModel;
+        pMe->mATCS.getModel(sModel);
+        str = sModel.c_str();
     }
     else
         str = "Not connected1";
@@ -484,10 +466,10 @@ void X2Mount::deviceInfoDetailedDescription(BasicStringInterface& str) const
 void X2Mount::deviceInfoFirmwareVersion(BasicStringInterface& str)
 {
     if(m_bLinked) {
-        char cFirmware[SERIAL_BUFFER_SIZE];
+        std::string sFirmware;
         X2MutexLocker ml(GetMutex());
-        mATCS.getFirmwareVersion(cFirmware, SERIAL_BUFFER_SIZE);
-        str = cFirmware;
+        mATCS.getFirmwareVersion(sFirmware);
+        str = sFirmware.c_str();
     }
     else
         str = "Not connected";
@@ -495,10 +477,10 @@ void X2Mount::deviceInfoFirmwareVersion(BasicStringInterface& str)
 void X2Mount::deviceInfoModel(BasicStringInterface& str)
 {
     if(m_bLinked) {
-        char cModel[SERIAL_BUFFER_SIZE];
         X2MutexLocker ml(GetMutex());
-        mATCS.getModel(cModel, SERIAL_BUFFER_SIZE);
-        str = cModel;
+        std::string sModel;
+        mATCS.getModel(sModel);
+        str = sModel.c_str();
     }
     else
         str = "Not connected";

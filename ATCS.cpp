@@ -107,8 +107,8 @@ int ATCS::Connect(char *pszPort)
         nErr = getDateFormat(m_bDdMmYy);
 
         // debug
-        getStandardTime(m_szTime, SERIAL_BUFFER_SIZE);
-        getStandardDate(m_szDate, SERIAL_BUFFER_SIZE);
+        getStandardTime(m_sTime);
+        getStandardDate(m_sDate);
 
         if(!m_bTimeSetOnce) {
             nErr = syncTime();
@@ -179,13 +179,12 @@ int ATCS::getNbSlewRates()
 }
 
 // returns "Slew", "ViewVel4", "ViewVel3", "ViewVel2", "ViewVel1"
-int ATCS::getRateName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize)
+int ATCS::getRateName(int nZeroBasedIndex, std::string &sOut)
 {
     if (nZeroBasedIndex > ATCS_NB_SLEW_SPEEDS)
         return ATCS_ERROR;
 
-    strncpy(pszOut, m_aszSlewRateNames[nZeroBasedIndex], nOutMaxSize);
-
+    sOut.assign(m_svSlewRateNames[nZeroBasedIndex]);
     return ATCS_OK;
 }
 
@@ -349,7 +348,7 @@ int ATCS::atclEnter()
 
 #pragma mark - dome controller informations
 
-int ATCS::getFirmwareVersion(char *pszVersion, unsigned int nStrMaxLen)
+int ATCS::getFirmwareVersion(std::string &sFirmware)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -361,12 +360,12 @@ int ATCS::getFirmwareVersion(char *pszVersion, unsigned int nStrMaxLen)
     if(nErr)
         return nErr;
 
-    strncpy(pszVersion, szResp, nStrMaxLen);
-    strncpy(m_szFirmwareVersion, szResp, nStrMaxLen);
+    sFirmware.assign(szResp);
+    m_sFirmwareVersion.assign(szResp);
     return nErr;
 }
 
-int ATCS::getModel(char *pszModel, unsigned int nStrMaxLen)
+int ATCS::getModel(std::string &sModel)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -378,9 +377,8 @@ int ATCS::getModel(char *pszModel, unsigned int nStrMaxLen)
     if(nErr)
         return nErr;
 
-    snprintf(pszModel, nStrMaxLen, "%s", szResp);
-    snprintf(m_szHardwareModel, nStrMaxLen, "%s", szResp);
-
+    sModel.assign(szResp);
+    m_sHardwareModel.assign(szResp);
     return nErr;
 }
 
@@ -608,7 +606,7 @@ int ATCS::isAligned(bool &bAligned)
     return nErr;
 }
 
-int ATCS::getAlignementType(char *szType, unsigned int nMaxLEn)
+int ATCS::getAlignementType(std::string &sType)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -616,37 +614,47 @@ int ATCS::getAlignementType(char *szType, unsigned int nMaxLEn)
     nErr = ATCSSendCommand("!NGat;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
-    strncpy(szType, szResp, nMaxLEn);
+    sType.assign(szResp);
     return nErr;
 }
 
-int ATCS::setAlignementType(char *szType)
+int ATCS::setAlignementType(std::string sType)
 {
     int nErr = ATCS_OK;
     char szCmd[SERIAL_BUFFER_SIZE];
     char szResp[SERIAL_BUFFER_SIZE];
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!NSat%s;", szType);
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!NSat%s;", sType.c_str());
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
     return nErr;
 }
 
-int ATCS::getNbAlignementType()
+
+int ATCS::setMeridianAvoidMethod(std::string sType)
 {
-    return ATCS_NB_ALIGNEMENT_TYPE;
+    int nErr = ATCS_OK;
+    char szCmd[SERIAL_BUFFER_SIZE];
+    char szResp[SERIAL_BUFFER_SIZE];
+
+    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!NSam%s;", sType.c_str());
+    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    return nErr;
 }
 
-int ATCS::getAlignementTypeName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize)
+int ATCS::getMeridianAvoidMethod(std::string &sType)
 {
-    if (nZeroBasedIndex > ATCS_NB_ALIGNEMENT_TYPE)
-        return ATCS_ERROR;
+    int nErr = ATCS_OK;
+    char szResp[SERIAL_BUFFER_SIZE];
 
-    strncpy(pszOut, m_szAlignmentType[nZeroBasedIndex], nOutMaxSize);
-
-    return ATCS_OK;
-
+    nErr = ATCSSendCommand("!NGam;", szResp, SERIAL_BUFFER_SIZE);
+    if(nErr)
+        return nErr;
+    sType.assign(szResp);
+    return nErr;
 }
+
 
 #pragma mark - tracking rates
 int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr)
@@ -1147,7 +1155,7 @@ int ATCS::syncTime()
 
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSst%s;", szTemp);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
-    getStandardTime(m_szTime, SERIAL_BUFFER_SIZE);
+    getStandardTime(m_sTime);
 
     return nErr;
 }
@@ -1177,11 +1185,11 @@ int ATCS::syncDate()
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSsd%s;", szTemp);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
-    getStandardDate(m_szDate, SERIAL_BUFFER_SIZE);
+    getStandardDate(m_sDate);
     return nErr;
 }
 
-int ATCS::getSiteName(char *szSiteName, unsigned int nMaxSize)
+int ATCS::getSiteName(std::string &sSiteName)
 {
     int nErr = ATCS_OK;
     int nSiteNb;
@@ -1190,7 +1198,7 @@ int ATCS::getSiteName(char *szSiteName, unsigned int nMaxSize)
     if(nErr)
         return nErr;
 
-    nErr = getUsingSiteName(nSiteNb, szSiteName, nMaxSize);
+    nErr = getUsingSiteName(nSiteNb, sSiteName);
 
     return nErr;
 }
@@ -1259,19 +1267,19 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
 
     return nErr;
 }
-int ATCS::getSiteData(char *szLongitude, char *szLatitude, char *TimeZone, int nMaxSize)
+int ATCS::getSiteData(std::string &sLongitude, std::string &sLatitude, std::string &sTimeZone)
 {
     int nErr = ATCS_OK;
 
-    nErr = getSiteLongitude(m_nSiteNumber, szLongitude, nMaxSize);
-    nErr |= getSiteLatitude(m_nSiteNumber, szLatitude, nMaxSize);
-    nErr |= getSiteTZ(m_nSiteNumber, TimeZone, nMaxSize);
+    nErr = getSiteLongitude(m_nSiteNumber, sLongitude);
+    nErr |= getSiteLatitude(m_nSiteNumber, sLatitude);
+    nErr |= getSiteTZ(m_nSiteNumber, sTimeZone);
     return nErr;
 }
 
 #pragma mark - Special commands & functions
 
-int ATCS::getTopActiveFault(char *szFault,unsigned int nMaxLen)
+int ATCS::getTopActiveFault(std::string &sFault)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1279,8 +1287,7 @@ int ATCS::getTopActiveFault(char *szFault,unsigned int nMaxLen)
     nErr = ATCSSendCommand("!HGtf;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
-    strncpy(szFault, szResp, nMaxLen);
-
+    sFault.assign(szResp);
     return nErr;
 }
 
@@ -1333,7 +1340,7 @@ int ATCS::getUsingSiteNumber(int &nSiteNb)
 
 }
 
-int ATCS::getUsingSiteName(int nSiteNb, char *szSiteName, unsigned int nMaxSize)
+int ATCS::getUsingSiteName(int nSiteNb, std::string &sSiteName)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1343,7 +1350,7 @@ int ATCS::getUsingSiteName(int nSiteNb, char *szSiteName, unsigned int nMaxSize)
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
-    strncpy(szSiteName, szResp, nMaxSize);
+    sSiteName.assign(szResp);
     return nErr;
 }
 
@@ -1383,7 +1390,7 @@ int ATCS::setSiteTimezone(int nSiteNb, const char *szTimezone)
     return nErr;
 }
 
-int ATCS::getSiteLongitude(int nSiteNb, char *szLongitude, int nMaxSize)
+int ATCS::getSiteLongitude(int nSiteNb, std::string &sLongitude)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1392,12 +1399,12 @@ int ATCS::getSiteLongitude(int nSiteNb, char *szLongitude, int nMaxSize)
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGo%d;", nSiteNb);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
     if(!nErr) {
-        strncpy(szLongitude, szResp, nMaxSize);
+        sLongitude.assign(szResp);
     }
     return nErr;
 }
 
-int ATCS::getSiteLatitude(int nSiteNb, char *szLatitude, int nMaxSize)
+int ATCS::getSiteLatitude(int nSiteNb, std::string &sLatitude)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1406,13 +1413,13 @@ int ATCS::getSiteLatitude(int nSiteNb, char *szLatitude, int nMaxSize)
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGa%d;", nSiteNb);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
     if(!nErr) {
-        strncpy(szLatitude, szResp, nMaxSize);
+        sLatitude.assign(szResp);
     }
 
     return nErr;
 }
 
-int ATCS::getSiteTZ(int nSiteNb, char *TimeZone, int nMaxSize)
+int ATCS::getSiteTZ(int nSiteNb, std::string &sTimeZone)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1421,7 +1428,7 @@ int ATCS::getSiteTZ(int nSiteNb, char *TimeZone, int nMaxSize)
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGz%d;", nSiteNb);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
     if(!nErr) {
-        strncpy(TimeZone, szResp, nMaxSize);
+        sTimeZone.assign(szResp);
     }
 
     return nErr;
@@ -1461,7 +1468,7 @@ int ATCS::getDateFormat(bool &bDdMmYy )
     return nErr;
 }
 
-int ATCS::getStandardTime(char *szTime, unsigned int nMaxLen)
+int ATCS::getStandardTime(std::string &sTime)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1469,11 +1476,11 @@ int ATCS::getStandardTime(char *szTime, unsigned int nMaxLen)
     nErr = ATCSSendCommand("!TGst;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
-    strncpy(szTime, szResp, nMaxLen);
+    sTime.assign(szResp);
     return nErr;
 }
 
-int ATCS::getStandardDate(char *szDate, unsigned int nMaxLen)
+int ATCS::getStandardDate(std::string &sDate)
 {
     int nErr = ATCS_OK;
     char szResp[SERIAL_BUFFER_SIZE];
@@ -1481,7 +1488,7 @@ int ATCS::getStandardDate(char *szDate, unsigned int nMaxLen)
     nErr = ATCSSendCommand("!TGsd;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
-    strncpy(szDate, szResp, nMaxLen);
+    sDate.assign(szResp);
     return nErr;
 }
 
