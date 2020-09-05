@@ -55,18 +55,12 @@ X2Mount::X2Mount(const char* pszDriverSelection,
     // set mount alignement type and meridian avoidance mode.
     if(strstr(pszDriverSelection,"Fork")) {
         mATCS.setMountMode(MountTypeInterface::Symmetrical_Equatorial);
-        mATCS.setAlignementType("Polar");
-        mATCS.setMeridianAvoidMethod("Lower");
     }
     else if(strstr(pszDriverSelection,"Equatorial")) {
          mATCS.setMountMode(MountTypeInterface::Asymmetrical_Equatorial);
-         mATCS.setAlignementType("Polar");
-         mATCS.setMeridianAvoidMethod("Full(GEM)");
      }
      else {
          mATCS.setMountMode(MountTypeInterface::AltAz);
-         mATCS.setAlignementType("AltAz");
-         mATCS.setMeridianAvoidMethod("Lower");
      }
 }
 
@@ -132,7 +126,8 @@ int X2Mount::queryAbstraction(const char* pszName, void** ppVal)
         *ppVal = dynamic_cast<SerialPortParams2Interface*>(this);
     else if (!strcmp(pszName, DriverSlewsToParkPositionInterface_Name))
         *ppVal = dynamic_cast<DriverSlewsToParkPositionInterface*>(this);
-	return SB_OK;
+
+    return SB_OK;
 }
 
 #pragma mark - OpenLoopMoveInterface

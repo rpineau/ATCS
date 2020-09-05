@@ -33,7 +33,7 @@ ATCS::ATCS()
     ltime = time(NULL);
 	timestamp = asctime(localtime(&ltime));
 	timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::ATCS] Version %3.2f build 2020_06_25_1040.\n", timestamp, DRIVER_VERSION);
+    fprintf(Logfile, "[%s] [ATCS::ATCS] Version %3.2f build 2020_09_05_1140.\n", timestamp, DRIVER_VERSION);
 	fprintf(Logfile, "[%s] ATCS New Constructor Called\n", timestamp);
     fflush(Logfile);
 #endif
@@ -97,6 +97,35 @@ int ATCS::Connect(char *pszPort)
     // disable any async message from the controller for debug mode
     setAsyncUpdateEnabled(false);
 #endif
+
+#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] ATCS::Connect m_mountType %d\n", timestamp, m_mountType);
+    fflush(Logfile);
+#endif
+
+    // set mount type
+    switch(m_mountType) {
+        case MountTypeInterface::Symmetrical_Equatorial:
+            setAlignementType("Polar");
+            setMeridianAvoidMethod("Lower");
+            break;
+
+        case MountTypeInterface::Asymmetrical_Equatorial :
+            setAlignementType("Polar");
+            setMeridianAvoidMethod("Full(GEM)");
+            break;
+
+        case MountTypeInterface::AltAz :
+            setAlignementType("AltAz");
+            setMeridianAvoidMethod("Lower");
+            break;
+            
+        default :
+            break;
+    }
     m_bJNOW = true;
     setEpochOfEntry("Now");
 
@@ -1227,6 +1256,7 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
     convertDecDegToDDMMSS(dLatitute, szLat, cSignLat, SERIAL_BUFFER_SIZE);
     snprintf(szHH,3,"%02d", int(fabs(dTimeZone)));
     snprintf(szMM,3,"%02d", int((fabs(dTimeZone) - int(fabs(dTimeZone)))) * 100);
+    
     if(dTimeZone<0) {
         snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "%s:%sW", szHH, szMM);
     }
