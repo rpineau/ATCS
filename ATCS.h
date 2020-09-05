@@ -28,8 +28,8 @@
 #include "StopWatch.h"
 
 
-#define ATCS_DEBUG 1   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
-#define DRIVER_VERSION 1.10;
+// #define ATCS_DEBUG 2   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
+#define DRIVER_VERSION 1.10
 
 enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, ATCS_ERROR};
 
@@ -73,10 +73,10 @@ public:
     void setSleeper(SleeperInterface *pSleeper) { m_pSleeper = pSleeper;};
 
     int getNbSlewRates();
-    int getRateName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize);
+    int getRateName(int nZeroBasedIndex, std::string &sOut);
     
-    int getFirmwareVersion(char *version, unsigned int strMaxLen);
-    int getModel(char *model, unsigned int strMaxLen);
+    int getFirmwareVersion(std::string &sFirmware);
+    int getModel(std::string &sModel);
 
     void    setMountMode(MountTypeInterface::Type mountType);
     MountTypeInterface::Type mountType();
@@ -84,11 +84,12 @@ public:
     int getRaAndDec(double &dRa, double &dDec);
     int syncTo(double dRa, double dDec);
     int isAligned(bool &bAligned);
-    int getAlignementType(char *szType, unsigned int nMaxLEn);
-    int setAlignementType(char *szType);
-    int getNbAlignementType();
-    int getAlignementTypeName(int nZeroBasedIndex, char *pszOut, unsigned int nOutMaxSize);
+    int getAlignementType(std::string &sType);
+    int setAlignementType(std::string sType);
 
+    int setMeridianAvoidMethod(std::string sType);
+    int getMeridianAvoidMethod(std::string &sType);
+    
     int setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr);
     int getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &dTrackDecArcSecPerHr);
 
@@ -112,14 +113,14 @@ public:
 
     int getLocalTimeFormat(bool &b24h);
     int getDateFormat(bool &bDdMmYy);
-    int getStandardTime(char *szTime, unsigned int nMaxLen);
-    int getStandardDate(char *szDate, unsigned int nMaxLen);
+    int getStandardTime(std::string &sTime);
+    int getStandardDate(std::string &sDate);
     int syncTime();
     int syncDate();
-    int getSiteName(char *szSiteName, unsigned int nMaxSize);
+    int getSiteName(std::string &sSiteName);
     int setSiteData(double dLongitude, double dLatitute, double dTimeZone);
-    int getSiteData(char *szLongitude, char *szLatitude, char *TimeZone, int nMaxSize); // assume all buffers have the same size
-    int getTopActiveFault(char *szFault, unsigned int nMaxLen);
+    int getSiteData(std::string &sLongitude, std::string &sLatitude, std::string &sTimeZone); // assume all buffers have the same size
+    int getTopActiveFault(std::string &sFault);
 
 private:
 
@@ -132,13 +133,13 @@ private:
     char    m_szLogBuffer[ATCS_LOG_BUFFER_SIZE];
 
 	bool    m_bIsConnected;                               // Connected to the mount?
-    char    m_szFirmwareVersion[SERIAL_BUFFER_SIZE];
+    std::string m_sFirmwareVersion;
 
     MountTypeInterface::Type    m_mountType;
     
-    char    m_szHardwareModel[SERIAL_BUFFER_SIZE];
-    char    m_szTime[SERIAL_BUFFER_SIZE];
-    char    m_szDate[SERIAL_BUFFER_SIZE];
+    std::string     m_sHardwareModel;
+    std::string     m_sTime;
+    std::string     m_sDate;
     int     m_nSiteNumber;
 
 	double  m_dGotoRATarget;						  // Current Target RA;
@@ -165,14 +166,14 @@ private:
     int     checkSiteTimeDateSetOnce(bool &bSet);
 
     int     getUsingSiteNumber(int &nSiteNb);
-    int     getUsingSiteName(int nSiteNb, char *szSiteName, unsigned int nMaxSize);
+    int     getUsingSiteName(int nSiteNb, std::string &sSiteName);
     int     setSiteLongitude(int nSiteNb, const char *szLongitude);
     int     setSiteLatitude(int nSiteNb, const char *szLatitude);
     int     setSiteTimezone(int nSiteNb, const char *szTimezone);
 
-    int     getSiteLongitude(int nSiteNb, char *szLongitude, int nMaxSize);
-    int     getSiteLatitude(int nSiteNb, char *szLatitude, int nMaxSize);
-    int     getSiteTZ(int nSiteNb, char *TimeZone, int nMaxSize);
+    int     getSiteLongitude(int nSiteNb, std::string &sLongitude);
+    int     getSiteLatitude(int nSiteNb, std::string &sLatitude);
+    int     getSiteTZ(int nSiteNb, std::string &sTimeZone);
 
     int     setTarget(double dRa, double dDec);
     int     setAsyncUpdateEnabled(bool bEnable);
@@ -201,9 +202,7 @@ private:
 
     int     parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator);
 
-    const char m_aszSlewRateNames[ATCS_NB_SLEW_SPEEDS][ATCS_SLEW_NAME_LENGHT] = { "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4",  "Slew"};
-    const char m_szAlignmentType[ATCS_NB_ALIGNEMENT_TYPE][ATCS_ALIGNEMENT_NAME_LENGHT] = { "Polar", "AltAz", "NearlyPolar", "NearlyAltAz"};
-
+    std::vector<std::string>    m_svSlewRateNames = { "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4",  "Slew"};
     CStopWatch      timer;
 
 
