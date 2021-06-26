@@ -14,7 +14,7 @@ ATCS::ATCS()
     m_bTimeSetOnce = false;
     m_bLimitCached = false;
 
-#ifdef ATCS_DEBUG
+#ifdef PLUGIN_DEBUG
 #if defined(SB_WIN_BUILD)
     m_sLogfilePath = getenv("HOMEDRIVE");
     m_sLogfilePath += getenv("HOMEPATH");
@@ -29,11 +29,11 @@ ATCS::ATCS()
 	Logfile = fopen(m_sLogfilePath.c_str(), "w");
 #endif
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
 	timestamp = asctime(localtime(&ltime));
 	timestamp[strlen(timestamp) - 1] = 0;
-    fprintf(Logfile, "[%s] [ATCS::ATCS] Version %3.2f build 2020_09_05_1140.\n", timestamp, DRIVER_VERSION);
+    fprintf(Logfile, "[%s] [ATCS::ATCS] Version %3.2f build 2021_04_05_1345.\n", timestamp, DRIVER_VERSION);
 	fprintf(Logfile, "[%s] ATCS New Constructor Called\n", timestamp);
     fflush(Logfile);
 #endif
@@ -43,14 +43,14 @@ ATCS::ATCS()
 
 ATCS::~ATCS(void)
 {
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
 	ltime = time(NULL);
 	timestamp = asctime(localtime(&ltime));
 	timestamp[strlen(timestamp) - 1] = 0;
 	fprintf(Logfile, "[%s] ATCS Destructor Called\n", timestamp );
     fflush(Logfile);
 #endif
-#ifdef ATCS_DEBUG
+#ifdef PLUGIN_DEBUG
     // Close LogFile
     if (Logfile) fclose(Logfile);
 #endif
@@ -58,11 +58,11 @@ ATCS::~ATCS(void)
 
 int ATCS::Connect(char *pszPort)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     bool bIsParked;
     bool bIsAligned;
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
 	ltime = time(NULL);
 	timestamp = asctime(localtime(&ltime));
 	timestamp[strlen(timestamp) - 1] = 0;
@@ -93,12 +93,12 @@ int ATCS::Connect(char *pszPort)
     disablePacketSeqChecking();
 	disableStaticStatusChangeNotification();
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     // disable any async message from the controller for debug mode
     setAsyncUpdateEnabled(false);
 #endif
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -156,7 +156,7 @@ int ATCS::Connect(char *pszPort)
         // are we aligned ?
         isAligned(bIsAligned);
         if(bIsAligned) { // if aligned, resume tracking
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
             ltime = time(NULL);
             timestamp = asctime(localtime(&ltime));
             timestamp[strlen(timestamp) - 1] = 0;
@@ -174,7 +174,7 @@ int ATCS::Connect(char *pszPort)
 
 int ATCS::Disconnect(void)
 {
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
 	ltime = time(NULL);
 	timestamp = asctime(localtime(&ltime));
 	timestamp[strlen(timestamp) - 1] = 0;
@@ -183,7 +183,7 @@ int ATCS::Disconnect(void)
 #endif
 	if (m_bIsConnected) {
         if(m_pSerx){
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
             ltime = time(NULL);
             timestamp = asctime(localtime(&ltime));
             timestamp[strlen(timestamp) - 1] = 0;
@@ -214,21 +214,21 @@ int ATCS::getRateName(int nZeroBasedIndex, std::string &sOut)
         return ATCS_ERROR;
 
     sOut.assign(m_svSlewRateNames[nZeroBasedIndex]);
-    return ATCS_OK;
+    return PLUGIN_OK;
 }
 
 #pragma mark - ATCS communication
 
 int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     unsigned char szResp[SERIAL_BUFFER_SIZE];
     unsigned long ulBytesWrite;
     bool resp_ok = false;
 
     // m_pSerx->purgeTxRx();  // <=== can't do this because of async messages.
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -245,7 +245,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE);
         if(nErr) {
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
             ltime = time(NULL);
             timestamp = asctime(localtime(&ltime));
             timestamp[strlen(timestamp) - 1] = 0;
@@ -265,7 +265,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
            szResp[0] == ATCL_INTERNAL_ERROR ||
            szResp[0] == ATCL_IDC_ASYNCH
            ) {
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
             ltime = time(NULL);
             timestamp = asctime(localtime(&ltime));
             timestamp[strlen(timestamp) - 1] = 0;
@@ -276,7 +276,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         else {
             if(szResp[0] == ATCL_SYNTAX_ERROR) { // not async but we need to log it
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
                 ltime = time(NULL);
                 timestamp = asctime(localtime(&ltime));
                 timestamp[strlen(timestamp) - 1] = 0;
@@ -293,7 +293,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
     if(pszResult)
         strncpy(pszResult, (const char *)szResp, nResultMaxLen);
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -311,9 +311,9 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
 }
 
 
-int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen)
+int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen, int nTimeout)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     unsigned long ulBytesRead = 0;
     unsigned long ulTotalBytesRead = 0;
     unsigned char *pszBufPtr;
@@ -322,12 +322,12 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
     pszBufPtr = pszRespBuffer;
 
     do {
-        nErr = m_pSerx->readFile(pszBufPtr, 1, ulBytesRead, MAX_TIMEOUT);
+        nErr = m_pSerx->readFile(pszBufPtr, 1, ulBytesRead, nTimeout);
         if(nErr) {
             return nErr;
         }
 
- #if defined ATCS_DEBUG && ATCS_DEBUG >= 3
+ #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 3
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -347,7 +347,7 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
         }
 
         if(*pszBufPtr == ATCL_ACK) {
-            nErr = ATCS_OK;
+            nErr = PLUGIN_OK;
             break;
         }
 
@@ -360,16 +360,106 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
     return nErr;
 }
 
+int ATCS::readResponse(unsigned char *szRespBuffer, int nBufferLen, int nTimeout)
+{
+    int nErr = PLUGIN_OK;
+    unsigned long ulBytesRead = 0;
+    unsigned long ulTotalBytesRead = 0;
+    unsigned char *pszBufPtr;
+    int nBytesWaiting = 0 ;
+    int nbTimeouts = 0;
+    
+    memset(szRespBuffer, 0, (size_t) nBufferLen);
+    pszBufPtr = szRespBuffer;
+    
+    do {
+        nErr = m_pSerx->bytesWaitingRx(nBytesWaiting);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 3
+        ltime = time(NULL);
+        timestamp = asctime(localtime(&ltime));
+        timestamp[strlen(timestamp) - 1] = 0;
+        fprintf(Logfile, "[%s] [ATCS::readResponse] nBytesWaiting = %d\n", timestamp, nBytesWaiting);
+        fprintf(Logfile, "[%s] [ATCS::readResponse] nBytesWaiting nErr = %d\n", timestamp, nErr);
+        fflush(Logfile);
+#endif
+        if(!nBytesWaiting) {
+            if(nbTimeouts++ >= NB_RX_WAIT) {
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+                ltime = time(NULL);
+                timestamp = asctime(localtime(&ltime));
+                timestamp[strlen(timestamp) - 1] = 0;
+                fprintf(Logfile, "[%s] [ATCS::readResponse] bytesWaitingRx timeout, no data for %d loops\n", timestamp, NB_RX_WAIT);
+                fflush(Logfile);
+#endif
+                nErr = ERR_RXTIMEOUT;
+                break;
+            }
+            m_pSleeper->sleep(MAX_READ_WAIT_TIMEOUT);
+            continue;
+        }
+        nbTimeouts = 0;
+        if(ulTotalBytesRead + nBytesWaiting <= nBufferLen)
+            nErr = m_pSerx->readFile(pszBufPtr, nBytesWaiting, ulBytesRead, nTimeout);
+        else {
+            nErr = ERR_RXTIMEOUT;
+            break; // buffer is full.. there is a problem !!
+        }
+        if(nErr) {
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+            ltime = time(NULL);
+            timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(Logfile, "[%s] [ATCS::readResponse] readFile error.\n", timestamp);
+            fflush(Logfile);
+#endif
+            return nErr;
+        }
+        
+        if (ulBytesRead != nBytesWaiting) { // timeout
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+            ltime = time(NULL);
+            timestamp = asctime(localtime(&ltime));
+            timestamp[strlen(timestamp) - 1] = 0;
+            fprintf(Logfile, "[%s] [ATCS::readResponse] readFile Timeout Error\n", timestamp);
+            fprintf(Logfile, "[%s] [ATCS::readResponse] readFile nBytesWaiting = %d\n", timestamp, nBytesWaiting);
+            fprintf(Logfile, "[%s] [CRTATCSIDome::readResponse] readFile ulBytesRead = %lu\n", timestamp, ulBytesRead);
+            fflush(Logfile);
+#endif
+        }
+        
+        ulTotalBytesRead += ulBytesRead;
+        pszBufPtr+=ulBytesRead;
+        // check for  errors or single ACK
+        if(*pszBufPtr == ATCL_NACK) {
+            nErr = ATCS_BAD_CMD_RESPONSE;
+            break;
+        }
+        
+        if(*pszBufPtr == ATCL_ACK) {
+            nErr = PLUGIN_OK;
+            break;
+        }
+
+    } while (ulTotalBytesRead < nBufferLen  && *(pszBufPtr-1) != ';');
+    
+    if(!ulTotalBytesRead)
+        nErr = COMMAND_TIMEOUT; // we didn't get an answer.. so timeout
+    else
+        *(pszBufPtr-1) = 0; //remove the ;
+    
+    return nErr;
+}
+
 int ATCS::atclEnter()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szCmd[SERIAL_BUFFER_SIZE];
     char szResp[SERIAL_BUFFER_SIZE];
 
     snprintf(szCmd,SERIAL_BUFFER_SIZE, "%c", ATCL_ENTER);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
-    nErr = ATCSSendCommand("!QDcn;", szResp, SERIAL_BUFFER_SIZE);
+    nErr |= ATCSSendCommand("!QDcn;", szResp, SERIAL_BUFFER_SIZE);
 
     return nErr;
 }
@@ -379,7 +469,7 @@ int ATCS::atclEnter()
 
 int ATCS::getFirmwareVersion(std::string &sFirmware)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     if(!m_bIsConnected)
@@ -396,7 +486,7 @@ int ATCS::getFirmwareVersion(std::string &sFirmware)
 
 int ATCS::getModel(std::string &sModel)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     if(!m_bIsConnected)
@@ -415,7 +505,7 @@ int ATCS::getModel(std::string &sModel)
 #pragma mark - Mount Coordinates
 void ATCS::setMountMode(MountTypeInterface::Type mountType)
 {
-    #if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+    #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -434,7 +524,7 @@ MountTypeInterface::Type ATCS::mountType()
 
 int ATCS::getRaAndDec(double &dRa, double &dDec)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     // get RA
@@ -442,7 +532,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
     if(nErr) {
         return nErr;
     }
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -452,7 +542,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
 
     // if not aligned we have no coordinates.
     if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE) == 0) {
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -474,7 +564,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
         return nErr;
     // even if RA was ok, we need to test Dec as we might have reach park between the 2 calls
     if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE) == 0) {
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -497,7 +587,7 @@ int ATCS::setTarget(double dRa, double dDec)
     char szTemp[SERIAL_BUFFER_SIZE];
     char cSign;
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -509,7 +599,7 @@ int ATCS::setTarget(double dRa, double dDec)
     // convert Ra value to HH:MM:SS.T before passing them to the ATCS
     convertRaToHHMMSSt(dRa, szTemp, SERIAL_BUFFER_SIZE);
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -521,7 +611,7 @@ int ATCS::setTarget(double dRa, double dDec)
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
 
     convertDecDegToDDMMSS(dDec, szTemp, cSign, SERIAL_BUFFER_SIZE);
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -538,10 +628,10 @@ int ATCS::setTarget(double dRa, double dDec)
 #pragma mark - Sync and Cal
 int ATCS::syncTo(double dRa, double dDec)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     bool bAligned;
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -552,7 +642,7 @@ int ATCS::syncTo(double dRa, double dDec)
 
     nErr = isAligned(bAligned);
     if(nErr) {
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -564,7 +654,7 @@ int ATCS::syncTo(double dRa, double dDec)
     // set sync target coordinate
     nErr = setTarget(dRa, dDec);
     if(nErr) {
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -576,7 +666,7 @@ int ATCS::syncTo(double dRa, double dDec)
     // Sync
     if(!bAligned){
         nErr = alignFromTargetRA_DecCalcSideEpochNow();
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -586,7 +676,7 @@ int ATCS::syncTo(double dRa, double dDec)
     }
     else {
         nErr = calFromTargetRA_DecEpochNow();
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -599,7 +689,7 @@ int ATCS::syncTo(double dRa, double dDec)
 
 int ATCS::calFromTargetRA_DecEpochNow()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     nErr = ATCSSendCommand("!ACrn;", szResp, SERIAL_BUFFER_SIZE);
     return nErr;
@@ -607,7 +697,7 @@ int ATCS::calFromTargetRA_DecEpochNow()
 
 int ATCS::calFromTargetRA_Dec()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     nErr = ATCSSendCommand("!ACrd;", szResp, SERIAL_BUFFER_SIZE);
     return nErr;
@@ -616,7 +706,7 @@ int ATCS::calFromTargetRA_Dec()
 
 int ATCS::isAligned(bool &bAligned)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!AGas;", szResp, SERIAL_BUFFER_SIZE);
@@ -637,7 +727,7 @@ int ATCS::isAligned(bool &bAligned)
 
 int ATCS::getAlignementType(std::string &sType)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!NGat;", szResp, SERIAL_BUFFER_SIZE);
@@ -649,7 +739,7 @@ int ATCS::getAlignementType(std::string &sType)
 
 int ATCS::setAlignementType(std::string sType)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szCmd[SERIAL_BUFFER_SIZE];
     char szResp[SERIAL_BUFFER_SIZE];
 
@@ -662,7 +752,7 @@ int ATCS::setAlignementType(std::string sType)
 
 int ATCS::setMeridianAvoidMethod(std::string sType)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szCmd[SERIAL_BUFFER_SIZE];
     char szResp[SERIAL_BUFFER_SIZE];
 
@@ -674,7 +764,7 @@ int ATCS::setMeridianAvoidMethod(std::string sType)
 
 int ATCS::getMeridianAvoidMethod(std::string &sType)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!NGam;", szResp, SERIAL_BUFFER_SIZE);
@@ -688,11 +778,11 @@ int ATCS::getMeridianAvoidMethod(std::string &sType)
 #pragma mark - tracking rates
 int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     if(!bTrackingOn) { // stop tracking
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -702,7 +792,7 @@ int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaA
         nErr = ATCSSendCommand("!RStrDrift;", szResp, SERIAL_BUFFER_SIZE);
     }
     else if(bTrackingOn && bIgnoreRates) { // sidereal
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -712,7 +802,7 @@ int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaA
         nErr = ATCSSendCommand("!RStrSidereal;", szResp, SERIAL_BUFFER_SIZE);
     }
     else { // custom rate
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -735,7 +825,7 @@ int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaA
 
 int ATCS::getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &dTrackDecArcSecPerHr)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!RGtr;", szResp, SERIAL_BUFFER_SIZE);
@@ -758,7 +848,7 @@ int ATCS::setCustomTRateOffsetRA(double dRa)
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!RSor%.2f;", dRa);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
     if(nErr) {
-#if defined ATCS_DEBUG
+#if defined PLUGIN_DEBUG
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -778,7 +868,7 @@ int ATCS::setCustomTRateOffsetDec(double dDec)
     snprintf(szCmd, SERIAL_BUFFER_SIZE, "!RSod%.2f;", dDec);
     nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
     if(nErr) {
-#if defined ATCS_DEBUG
+#if defined PLUGIN_DEBUG
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -818,7 +908,7 @@ int ATCS::getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr)
 #pragma mark - Limis
 int ATCS::getLimits(double &dHoursEast, double &dHoursWest)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     double dEast, dWest;
 
     if(m_bLimitCached) {
@@ -874,7 +964,7 @@ int ATCS::getSoftLimitWestAngle(double &dAngle)
 
 int ATCS::startSlewTo(double dRa, double dDec)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     bool bAligned;
 
     nErr = isAligned(bAligned);
@@ -904,13 +994,13 @@ int ATCS::slewTargetRA_DecEpochNow()
 
 int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, unsigned int nRate)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szCmd[SERIAL_BUFFER_SIZE];
     char szResp[SERIAL_BUFFER_SIZE];
 
     m_nOpenLoopDir = Dir;
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -951,10 +1041,10 @@ int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, unsigned int nR
 
 int ATCS::stopOpenLoopMove()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -978,7 +1068,7 @@ int ATCS::stopOpenLoopMove()
 
 int ATCS::isSlewToComplete(bool &bComplete)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     int nPrecentRemaining;
 
@@ -992,7 +1082,7 @@ int ATCS::isSlewToComplete(bool &bComplete)
     nErr = ATCSSendCommand("!GGgr;", szResp, SERIAL_BUFFER_SIZE);
     if(nErr)
         return nErr;
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -1003,7 +1093,7 @@ int ATCS::isSlewToComplete(bool &bComplete)
     // remove the %
     szResp[strlen(szResp) -1 ] = 0;
     
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -1020,7 +1110,7 @@ int ATCS::isSlewToComplete(bool &bComplete)
 
 int ATCS::gotoPark(double dRa, double dDec)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     // set park position ?
@@ -1033,7 +1123,7 @@ int ATCS::gotoPark(double dRa, double dDec)
 
 int ATCS::markParkPosition()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!AMpp;", szResp, SERIAL_BUFFER_SIZE);
@@ -1044,7 +1134,7 @@ int ATCS::markParkPosition()
 
 int ATCS::getAtPark(bool &bParked)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     bParked = false;
@@ -1057,13 +1147,13 @@ int ATCS::getAtPark(bool &bParked)
 
 int ATCS::unPark()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     bool bAligned;
 
     // are we aligned ?
     nErr = isAligned(bAligned);
     if(nErr) {
-#ifdef ATCS_DEBUG
+#ifdef PLUGIN_DEBUG
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -1075,7 +1165,7 @@ int ATCS::unPark()
         return nErr;
     }
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -1087,7 +1177,7 @@ int ATCS::unPark()
     if(!bAligned) {
         nErr = alignFromLastPosition();
         if(nErr) {
-#ifdef ATCS_DEBUG
+#ifdef PLUGIN_DEBUG
             ltime = time(NULL);
             timestamp = asctime(localtime(&ltime));
             timestamp[strlen(timestamp) - 1] = 0;
@@ -1100,7 +1190,7 @@ int ATCS::unPark()
     }
     nErr = setTrackingRates(true, true, 0, 0);
     if(nErr) {
-#ifdef ATCS_DEBUG
+#ifdef PLUGIN_DEBUG
         ltime = time(NULL);
         timestamp = asctime(localtime(&ltime));
         timestamp[strlen(timestamp) - 1] = 0;
@@ -1116,7 +1206,7 @@ int ATCS::unPark()
 
 int ATCS::getRefractionCorrEnabled(bool &bEnabled)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     bEnabled = false;
@@ -1129,7 +1219,7 @@ int ATCS::getRefractionCorrEnabled(bool &bEnabled)
 
 int ATCS::setRefractionCorrEnabled(bool bEnable)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1149,7 +1239,7 @@ int ATCS::setRefractionCorrEnabled(bool bEnable)
 
 int ATCS::Abort()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!XXxx;", szResp, SERIAL_BUFFER_SIZE);
@@ -1159,7 +1249,7 @@ int ATCS::Abort()
 #pragma mark - time and site methods
 int ATCS::syncTime()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     int yy, mm, dd, h, min, dst;
     double sec;
     int n12h_time;
@@ -1192,7 +1282,7 @@ int ATCS::syncTime()
 
 int ATCS::syncDate()
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     int yy, mm, dd, h, min, dst;
     double sec;
 
@@ -1220,7 +1310,7 @@ int ATCS::syncDate()
 
 int ATCS::getSiteName(std::string &sSiteName)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     int nSiteNb;
 
     nErr = getUsingSiteNumber(nSiteNb);
@@ -1234,7 +1324,7 @@ int ATCS::getSiteName(std::string &sSiteName)
 
 int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szLong[SERIAL_BUFFER_SIZE];
     char szLat[SERIAL_BUFFER_SIZE];
     char szTimeZone[SERIAL_BUFFER_SIZE];
@@ -1242,7 +1332,7 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
     char cSignLong;
     char cSignLat;
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -1281,7 +1371,7 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
         snprintf(szLat, SERIAL_BUFFER_SIZE, "%sS", szLat);
     }
 
-#if defined ATCS_DEBUG && ATCS_DEBUG >= 2
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     ltime = time(NULL);
     timestamp = asctime(localtime(&ltime));
     timestamp[strlen(timestamp) - 1] = 0;
@@ -1299,7 +1389,7 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
 }
 int ATCS::getSiteData(std::string &sLongitude, std::string &sLatitude, std::string &sTimeZone)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
 
     nErr = getSiteLongitude(m_nSiteNumber, sLongitude);
     nErr |= getSiteLatitude(m_nSiteNumber, sLatitude);
@@ -1311,7 +1401,7 @@ int ATCS::getSiteData(std::string &sLongitude, std::string &sLatitude, std::stri
 
 int ATCS::getTopActiveFault(std::string &sFault)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!HGtf;", szResp, SERIAL_BUFFER_SIZE);
@@ -1344,7 +1434,7 @@ int ATCS::disableStaticStatusChangeNotification()
 #pragma mark - site data
 int ATCS::checkSiteTimeDateSetOnce(bool &bSet)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     bSet = false;
@@ -1357,7 +1447,7 @@ int ATCS::checkSiteTimeDateSetOnce(bool &bSet)
 
 int ATCS::getUsingSiteNumber(int &nSiteNb)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!SGuu;", szResp, SERIAL_BUFFER_SIZE);
@@ -1372,7 +1462,7 @@ int ATCS::getUsingSiteNumber(int &nSiteNb)
 
 int ATCS::getUsingSiteName(int nSiteNb, std::string &sSiteName)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1386,7 +1476,7 @@ int ATCS::getUsingSiteName(int nSiteNb, std::string &sSiteName)
 
 int ATCS::setSiteLongitude(int nSiteNb, const char *szLongitude)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1398,7 +1488,7 @@ int ATCS::setSiteLongitude(int nSiteNb, const char *szLongitude)
 
 int ATCS::setSiteLatitude(int nSiteNb, const char *szLatitude)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1410,7 +1500,7 @@ int ATCS::setSiteLatitude(int nSiteNb, const char *szLatitude)
 
 int ATCS::setSiteTimezone(int nSiteNb, const char *szTimezone)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1422,7 +1512,7 @@ int ATCS::setSiteTimezone(int nSiteNb, const char *szTimezone)
 
 int ATCS::getSiteLongitude(int nSiteNb, std::string &sLongitude)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1436,7 +1526,7 @@ int ATCS::getSiteLongitude(int nSiteNb, std::string &sLongitude)
 
 int ATCS::getSiteLatitude(int nSiteNb, std::string &sLatitude)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1451,7 +1541,7 @@ int ATCS::getSiteLatitude(int nSiteNb, std::string &sLatitude)
 
 int ATCS::getSiteTZ(int nSiteNb, std::string &sTimeZone)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1469,7 +1559,7 @@ int ATCS::getSiteTZ(int nSiteNb, std::string &sTimeZone)
 
 int ATCS::getLocalTimeFormat(bool &b24h)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!TGlf;", szResp, SERIAL_BUFFER_SIZE);
@@ -1485,7 +1575,7 @@ int ATCS::getLocalTimeFormat(bool &b24h)
 
 int ATCS::getDateFormat(bool &bDdMmYy )
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!TGdf;", szResp, SERIAL_BUFFER_SIZE);
@@ -1500,7 +1590,7 @@ int ATCS::getDateFormat(bool &bDdMmYy )
 
 int ATCS::getStandardTime(std::string &sTime)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!TGst;", szResp, SERIAL_BUFFER_SIZE);
@@ -1512,7 +1602,7 @@ int ATCS::getStandardTime(std::string &sTime)
 
 int ATCS::getStandardDate(std::string &sDate)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
 
     nErr = ATCSSendCommand("!TGsd;", szResp, SERIAL_BUFFER_SIZE);
@@ -1525,7 +1615,7 @@ int ATCS::getStandardDate(std::string &sDate)
 
 int ATCS::setAsyncUpdateEnabled(bool bEnable)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
     char szCmd[SERIAL_BUFFER_SIZE];
 
@@ -1603,7 +1693,7 @@ void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsig
 
 int ATCS::convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     std::vector<std::string> vFieldsData;
 
     dDecDeg = 0;
@@ -1637,7 +1727,7 @@ void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size)
 
 int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     std::vector<std::string> vFieldsData;
 
     dRa = 0;
@@ -1658,7 +1748,7 @@ int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
 
 int ATCS::parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator)
 {
-    int nErr = ATCS_OK;
+    int nErr = PLUGIN_OK;
     std::string sSegment;
     std::stringstream ssTmp(pszIn);
 
