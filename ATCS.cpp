@@ -1703,7 +1703,13 @@ int ATCS::convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg)
         return nErr;
 
     if(vFieldsData.size() >= 3) {
-        dDecDeg = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60 + atof(vFieldsData[1].c_str())/3600;
+        dDecDeg = std::stod(vFieldsData[0]);
+        if(dDecDeg <0) {
+            dDecDeg = dDecDeg - std::stod(vFieldsData[1])/60.0 - std::stod(vFieldsData[2])/3600.0;
+        }
+        else {
+            dDecDeg = dDecDeg + std::stod(vFieldsData[1])/60.0 + std::stod(vFieldsData[2])/3600.0;
+        }
     }
     else
         nErr = ERR_PARSE;
@@ -1737,7 +1743,7 @@ int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
         return nErr;
 
     if(vFieldsData.size() >= 3) {
-        dRa = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60 + atof(vFieldsData[1].c_str())/3600;
+        dRa = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60.0 + atof(vFieldsData[1].c_str())/3600.0;
     }
     else
         nErr = ERR_PARSE;
