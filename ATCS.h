@@ -16,6 +16,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <cmath>
 
 #include "../../licensedinterfaces/sberrorx.h"
 #include "../../licensedinterfaces/theskyxfacadefordriversinterface.h"
@@ -27,16 +28,18 @@
 
 #include "StopWatch.h"
 
+#define PLUGIN_DEBUG 2   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
+#define DRIVER_VERSION 1.2
 
-// #define ATCS_DEBUG 2   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
-#define DRIVER_VERSION 1.10
-
-enum ATCSErrors {ATCS_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, ATCS_ERROR};
+enum ATCSErrors {PLUGIN_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, COMMAND_TIMEOUT, ATCS_ERROR};
 
 #define SERIAL_BUFFER_SIZE 256
 #define MAX_TIMEOUT 1000
 #define ATCS_LOG_BUFFER_SIZE 256
 #define ERR_PARSE   1
+
+#define MAX_READ_WAIT_TIMEOUT 25
+#define NB_RX_WAIT 10
 
 /// ATCL response code
 #define ATCL_ENTER  0xB1
@@ -157,8 +160,8 @@ private:
     double  m_dHoursWest;
     
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen);
-    int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen);
-
+    int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen, int nTimeout = MAX_TIMEOUT);
+    int     readResponse(unsigned char *respBuffer, int nBufferLen, int nTimeout = MAX_TIMEOUT);
 
     int     atclEnter();
     int     disablePacketSeqChecking();
@@ -206,7 +209,7 @@ private:
     CStopWatch      timer;
 
 
-#ifdef ATCS_DEBUG
+#ifdef PLUGIN_DEBUG
     std::string m_sLogfilePath;
 	// timestamp for logs
     char *timestamp;

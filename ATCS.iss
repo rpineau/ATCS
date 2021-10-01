@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Astrometric Instruments ATCS X2 Driver"
-#define MyAppVersion "1.1"
+#define MyAppVersion "1.10"
 #define MyAppPublisher "RTI-Zone"
 #define MyAppURL "https://rti-zone.org"
 
@@ -40,14 +40,22 @@ DirExistsWarning=no
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[Dirs]
+Name: "{app}\Plugins\MountPlugIns";
+Name: "{app}\Plugins64\MountPlugIns";
+
 [Files]
-; WIll also need to customise these!
-Source: "mountlist ATCS.txt"; DestDir: "{app}\Miscellaneous Files"; Flags: ignoreversion
-Source: "libATCS\Release\libATCS.dll"; DestDir: "{app}\Plugins\MountPlugIns"; Flags: ignoreversion
-Source: "ATCS.ui"; DestDir: "{app}\Plugins\MountPlugIns"; Flags: ignoreversion
-Source: "Astrometric.png"; DestDir: "{app}\Plugins\MountPlugIns"; Flags: ignoreversion
-; NOTE: Don't use "Flags: ignoreversion" on any shared system files
-; msgBox('Do you want to install MyProg.exe to ' + ExtractFilePath(CurrentFileName) + '?', mbConfirmation, MB_YESNO)
+Source: "mountlist ATCS.txt";                   DestDir: "{app}\Miscellaneous Files"; Flags: ignoreversion
+Source: "mountlist ATCS.txt";                   DestDir: "{app}\Miscellaneous Files"; Flags: ignoreversion; DestName: "mountlist64 ATCS.txt"
+; 32 bits
+Source: "libATCS\Win32\Release\libATCS.dll";    DestDir: "{app}\Plugins\MountPlugIns"; Flags: ignoreversion
+Source: "ATCS.ui";                              DestDir: "{app}\Plugins\MountPlugIns"; Flags: ignoreversion
+Source: "Astrometric.png";                      DestDir: "{app}\Plugins\MountPlugIns"; Flags: ignoreversion
+; 64 bits
+Source: "libATCS\x64\Release\libATCS.dll";      DestDir: "{app}\Plugins64\MountPlugIns"; Flags: ignoreversion; Check: DirExists(ExpandConstant('{app}\Plugins64\MountPlugIns'))
+Source: "ATCS.ui";                              DestDir: "{app}\Plugins64\MountPlugIns"; Flags: ignoreversion; Check: DirExists(ExpandConstant('{app}\Plugins64\MountPlugIns'))
+Source: "Astrometric.png";                      DestDir: "{app}\Plugins64\MountPlugIns"; Flags: ignoreversion; Check: DirExists(ExpandConstant('{app}\Plugins64\MountPlugIns'))
+
 
 [Code]
 {* Below are functions to read TheSkyXInstallPath.txt and confirm that the directory does exist
