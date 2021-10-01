@@ -16,6 +16,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <cmath>
 
 #include "../../licensedinterfaces/sberrorx.h"
 #include "../../licensedinterfaces/theskyxfacadefordriversinterface.h"

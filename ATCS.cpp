@@ -1687,7 +1687,7 @@ void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsig
     mm = dDeg - DD;
     MM = int(mm*60);
     ss = (mm*60) - MM;
-    SS = int(ceil(ss*60));
+    SS = int(std::roundf(ss*60));
     snprintf(szResult, size, "%02d:%02d:%02d", DD, MM, SS);
 }
 
