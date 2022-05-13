@@ -1688,6 +1688,7 @@ void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsig
     MM = int(mm*60);
     ss = (mm*60) - MM;
     SS = int(std::roundf(ss*60));
+
     snprintf(szResult, size, "%02d:%02d:%02d", DD, MM, SS);
 }
 
@@ -1721,6 +1722,7 @@ void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size)
 {
     int HH, MM;
     double hh, mm, SSt;
+    std::stringstream ssTmp;
 
     // convert Ra value to HH:MM:SS.T before passing them to the ATCS
     HH = int(dRa);
@@ -1728,7 +1730,17 @@ void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size)
     MM = int(hh*60);
     mm = (hh*60) - MM;
     SSt = mm * 60;
-    snprintf(szResult,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.1f", HH, MM, SSt);
+    ssTmp << std::setw(4) << std::fixed << std::setprecision(1) << SSt;
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    ltime = time(NULL);
+    timestamp = asctime(localtime(&ltime));
+    timestamp[strlen(timestamp) - 1] = 0;
+    fprintf(Logfile, "[%s] [ATCS::convertRaToHHMMSSt] SSt : %f\n", timestamp, SSt);
+    fprintf(Logfile, "[%s] [ATCS::convertRaToHHMMSSt] ssTmp : %s\n", timestamp, ssTmp.str().c_str());
+    fflush(Logfile);
+#endif
+
+    snprintf(szResult,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.1f", HH, MM, std::stod(ssTmp.str()));
 }
 
 int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
