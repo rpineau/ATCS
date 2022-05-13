@@ -1755,7 +1755,7 @@ int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
         return nErr;
 
     if(vFieldsData.size() >= 3) {
-        dRa = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60.0 + atof(vFieldsData[1].c_str())/3600.0;
+        dRa = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60.0 + atof(vFieldsData[2].c_str())/3600.0;
     }
     else
         nErr = ERR_PARSE;
