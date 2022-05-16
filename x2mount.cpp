@@ -43,7 +43,6 @@ X2Mount::X2Mount(const char* pszDriverSelection,
     mATCS.setSerxPointer(m_pSerX);
     mATCS.setTSX(m_pTheSkyXForMounts);
     mATCS.setSleeper(m_pSleeper);
-    mATCS.setLogger(m_pLogger);
 
     m_CurrentRateIndex = 0;
 

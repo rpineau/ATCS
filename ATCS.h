@@ -18,6 +18,7 @@
 #include <iostream>
 #include <cmath>
 #include <iomanip>
+#include <algorithm>
 
 #include "../../licensedinterfaces/sberrorx.h"
 #include "../../licensedinterfaces/theskyxfacadefordriversinterface.h"
@@ -30,7 +31,7 @@
 #include "StopWatch.h"
 
 // #define PLUGIN_DEBUG 2   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
-#define DRIVER_VERSION 1.4
+#define DRIVER_VERSION 1.5
 
 enum ATCSErrors {PLUGIN_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, COMMAND_TIMEOUT, ATCS_ERROR};
 
@@ -72,7 +73,6 @@ public:
 	bool isConnected() const { return m_bIsConnected; }
 
     void setSerxPointer(SerXInterface *p) { m_pSerx = p; }
-    void setLogger(LoggerInterface *pLogger) { m_pLogger = pLogger; };
     void setTSX(TheSkyXFacadeForDriversInterface *pTSX) { m_pTsx = pTSX;};
     void setSleeper(SleeperInterface *pSleeper) { m_pSleeper = pSleeper;};
 
@@ -129,7 +129,6 @@ public:
 private:
 
     SerXInterface                       *m_pSerx;
-    LoggerInterface                     *m_pLogger;
     TheSkyXFacadeForDriversInterface    *m_pTsx;
     SleeperInterface                    *m_pSleeper;
 
@@ -162,7 +161,7 @@ private:
     
     int     ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen);
     int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen, int nTimeout = MAX_TIMEOUT);
-    int     readResponse(unsigned char *respBuffer, int nBufferLen, int nTimeout = MAX_TIMEOUT);
+    // int     readResponse(unsigned char *respBuffer, int nBufferLen, int nTimeout = MAX_TIMEOUT);
 
     int     atclEnter();
     int     disablePacketSeqChecking();
@@ -211,11 +210,9 @@ private:
 
 
 #ifdef PLUGIN_DEBUG
+    const std::string getTimeStamp();
+    std::ofstream m_sLogFile;
     std::string m_sLogfilePath;
-	// timestamp for logs
-    char *timestamp;
-	time_t ltime;
-	FILE *Logfile;	  // LogFile
 #endif
 	
 };
