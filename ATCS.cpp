@@ -270,6 +270,7 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got response : " << szResp << std::endl;
     }
     m_sLogFile.flush();
+    m_sLogFile << std::dec;
 #endif
 
     return nErr;
@@ -302,6 +303,7 @@ int ATCS::ATCSSendCommand(const std::string sCmd, std::string &sResp, int nTimeo
             else
                 m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string] ERROR " << nErr<< " reading response :" << sResp << std::endl;
             m_sLogFile.flush();
+            m_sLogFile << std::dec;
 #endif
             return nErr;
         }
@@ -342,6 +344,7 @@ int ATCS::ATCSSendCommand(const std::string sCmd, std::string &sResp, int nTimeo
             m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string]  got response : " << sResp << std::endl;
         }
         m_sLogFile.flush();
+        m_sLogFile << std::dec;
 #endif
 
     }
@@ -369,6 +372,7 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 3
         m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSreadResponse]  *pszBufPtr : " << std::hex << *pszBufPtr << std::endl;
         m_sLogFile.flush();
+        m_sLogFile << std::dec;
 #endif
 
         if (ulBytesRead !=1) {// timeout
