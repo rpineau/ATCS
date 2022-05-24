@@ -222,11 +222,11 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
         return nErr;
     // read response
     while(!resp_ok) {
-        nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE);
+        nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE, MAX_TIMEOUT);
         if(nErr) {
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-            if(int(sResp[0]) == ATCL_NACK )
+            if(int(szResp[0]) == ATCL_NACK )
                 m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand] ERROR reading response , ATCL_NACK received " << std::endl;
             else
                 m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand] ERROR " << nErr<< " reading response :" << szResp << std::endl;
@@ -262,15 +262,89 @@ int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nRes
     if(pszResult)
         strncpy(pszResult, (const char *)szResp, nResultMaxLen);
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    if(int(tmpResp[0]) == ATCL_ACK )
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got ATCL_ACK : " << std::hex << szResp[0] << std::endl;
-    else if(int(tmpResp[0]) == ATCL_NACK )
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got ATCL_NACK : " << std::hex << szResp[0] << std::endl;
+    if(int(szResp[0]) == ATCL_ACK )
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got ATCL_ACK : " << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)(szResp[0]) << std::endl;
+    else if(int(szResp[0]) == ATCL_NACK )
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got ATCL_NACK : " << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)(szResp[0]) << std::endl;
     else {
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got response : " << sResp << std::endl;
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got response : " << szResp << std::endl;
     }
     m_sLogFile.flush();
 #endif
+
+    return nErr;
+}
+
+int ATCS::ATCSSendCommand(const std::string sCmd, std::string &sResp, int nTimeout)
+{
+    int nErr = PLUGIN_OK;
+    unsigned long  ulBytesWrite;
+    bool resp_ok = false;
+    sResp.clear();
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string] sending " << sCmd << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = m_pSerx->writeFile((void *)sCmd.c_str(), sCmd.size(), ulBytesWrite);
+    m_pSerx->flushTx();
+    if(nErr)
+        return nErr;
+    // read response
+    while(!resp_ok) {
+        nErr = ATCSreadResponse(sResp, nTimeout);
+        if(nErr) {
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+            if(sResp[0] == char(ATCL_NACK ))
+                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string] ERROR reading response , ATCL_NACK received " << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)((unsigned char)sResp[0]) << std::endl;
+            else if(sResp[0] == char(ATCL_ACK ))
+                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string] ERROR reading response , ATCL_ACK received " << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)((unsigned char)sResp[0]) << std::endl;
+            else
+                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string] ERROR " << nErr<< " reading response :" << sResp << std::endl;
+            m_sLogFile.flush();
+#endif
+            return nErr;
+        }
+
+
+        // filter out async status and log them in debug mode
+        if(sResp.size()) {
+            if(sResp[0] == char(ATCL_STATUS) ||
+               sResp[0]== char(ATCL_WARNING) ||
+               sResp[0] == char(ATCL_ALERT) ||
+               sResp[0] == char(ATCL_INTERNAL_ERROR) ||
+               sResp[0] == char(ATCL_IDC_ASYNCH)
+               ) {
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string] Async message :  " << sResp.substr(1, sResp.length()) << std::endl;
+                m_sLogFile.flush();
+#endif
+            }
+            else {
+                if(sResp[0] == char(ATCL_SYNTAX_ERROR)) { // not async but we need to log it
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+                    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string] Async message :  " << sResp.substr(1, sResp.length()) << std::endl;
+                    m_sLogFile.flush();
+#endif
+                }
+                resp_ok = true;
+            }
+        }
+    } // end while(!resp_ok)
+    if(sResp.size()) {
+        sResp = rtrim(sResp, "%");
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+        if(sResp[0] == char(ATCL_ACK) )
+            m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string]  got ATCL_ACK : " << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)((unsigned char)sResp[0]) << std::endl;
+        else if(sResp[0] == char(ATCL_NACK) )
+            m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string]  got ATCL_NACK : " << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)((unsigned char)sResp[0]) << std::endl;
+        else {
+            m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string]  got response : " << sResp << std::endl;
+        }
+        m_sLogFile.flush();
+#endif
+
+    }
 
     return nErr;
 }
@@ -321,108 +395,122 @@ int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen
 
     return nErr;
 }
-/*
-int ATCS::readResponse(unsigned char *szRespBuffer, int nBufferLen, int nTimeout)
+
+int ATCS::ATCSreadResponse(std::string &sResp, int nTimeout)
 {
     int nErr = PLUGIN_OK;
+    char pszBuf[SERIAL_BUFFER_SIZE];
     unsigned long ulBytesRead = 0;
     unsigned long ulTotalBytesRead = 0;
-    unsigned char *pszBufPtr;
+    char *pszBufPtr;
     int nBytesWaiting = 0 ;
     int nbTimeouts = 0;
-    
-    memset(szRespBuffer, 0, (size_t) nBufferLen);
-    pszBufPtr = szRespBuffer;
-    
+
+    memset(pszBuf, 0, SERIAL_BUFFER_SIZE);
+    pszBufPtr = pszBuf;
+
     do {
         nErr = m_pSerx->bytesWaitingRx(nBytesWaiting);
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 3
-        ltime = time(NULL);
-        timestamp = asctime(localtime(&ltime));
-        timestamp[strlen(timestamp) - 1] = 0;
-        fprintf(Logfile, "[%s] [ATCS::readResponse] nBytesWaiting = %d\n", timestamp, nBytesWaiting);
-        fprintf(Logfile, "[%s] [ATCS::readResponse] nBytesWaiting nErr = %d\n", timestamp, nErr);
-        fflush(Logfile);
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] nBytesWaiting      : " << nBytesWaiting << std::endl;
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] nBytesWaiting nErr : " << nErr << std::endl;
+        m_sLogFile.flush();
 #endif
         if(!nBytesWaiting) {
-            if(nbTimeouts++ >= NB_RX_WAIT) {
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-                ltime = time(NULL);
-                timestamp = asctime(localtime(&ltime));
-                timestamp[strlen(timestamp) - 1] = 0;
-                fprintf(Logfile, "[%s] [ATCS::readResponse] bytesWaitingRx timeout, no data for %d loops\n", timestamp, NB_RX_WAIT);
-                fflush(Logfile);
+            nbTimeouts += MAX_READ_WAIT_TIMEOUT;
+            if(nbTimeouts >= nTimeout) {
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 3
+                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] bytesWaitingRx timeout, no data for " << nbTimeouts << " ms"<< std::endl;
+                m_sLogFile.flush();
 #endif
-                nErr = ERR_RXTIMEOUT;
+                nErr = COMMAND_TIMEOUT;
                 break;
             }
-            m_pSleeper->sleep(MAX_READ_WAIT_TIMEOUT);
+            std::this_thread::sleep_for(std::chrono::milliseconds(MAX_READ_WAIT_TIMEOUT));
             continue;
         }
         nbTimeouts = 0;
-        if(ulTotalBytesRead + nBytesWaiting <= nBufferLen)
+        if(ulTotalBytesRead + nBytesWaiting <= SERIAL_BUFFER_SIZE) {
             nErr = m_pSerx->readFile(pszBufPtr, nBytesWaiting, ulBytesRead, nTimeout);
+            // check for  errors or single ACK
+            if(*pszBufPtr == char(ATCL_NACK)) {
+#if defined PLUGIN_DEBUG
+                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] ATCL_NACK received." << std::endl;
+                m_sLogFile.flush();
+#endif
+                ulTotalBytesRead += ulBytesRead;
+                nErr = ATCS_BAD_CMD_RESPONSE;
+                break;
+            }
+
+            if(*pszBufPtr == char(ATCL_ACK)) {
+#if defined PLUGIN_DEBUG
+                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] ATCL_ACK received." << std::endl;
+                m_sLogFile.flush();
+#endif
+                ulTotalBytesRead += ulBytesRead;
+                nErr = PLUGIN_OK;
+                break;
+            }
+
+        }
         else {
             nErr = ERR_RXTIMEOUT;
             break; // buffer is full.. there is a problem !!
         }
         if(nErr) {
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-            ltime = time(NULL);
-            timestamp = asctime(localtime(&ltime));
-            timestamp[strlen(timestamp) - 1] = 0;
-            fprintf(Logfile, "[%s] [ATCS::readResponse] readFile error.\n", timestamp);
-            fflush(Logfile);
+#if defined PLUGIN_DEBUG
+            m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] readFile error : " << nErr << std::endl;
+            m_sLogFile.flush();
 #endif
             return nErr;
         }
-        
+
         if (ulBytesRead != nBytesWaiting) { // timeout
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-            ltime = time(NULL);
-            timestamp = asctime(localtime(&ltime));
-            timestamp[strlen(timestamp) - 1] = 0;
-            fprintf(Logfile, "[%s] [ATCS::readResponse] readFile Timeout Error\n", timestamp);
-            fprintf(Logfile, "[%s] [ATCS::readResponse] readFile nBytesWaiting = %d\n", timestamp, nBytesWaiting);
-            fprintf(Logfile, "[%s] [CRTATCSIDome::readResponse] readFile ulBytesRead = %lu\n", timestamp, ulBytesRead);
-            fflush(Logfile);
+#if defined PLUGIN_DEBUG
+            m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] readFile Timeout Error." << std::endl;
+            m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] readFile nBytesWaiting : " << nBytesWaiting << std::endl;
+            m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] readFile ulBytesRead   : " << ulBytesRead << std::endl;
+            m_sLogFile.flush();
 #endif
         }
-        
+
         ulTotalBytesRead += ulBytesRead;
         pszBufPtr+=ulBytesRead;
-        // check for  errors or single ACK
-        if(*pszBufPtr == ATCL_NACK) {
-            nErr = ATCS_BAD_CMD_RESPONSE;
-            break;
-        }
-        
-        if(*pszBufPtr == ATCL_ACK) {
-            nErr = PLUGIN_OK;
-            break;
-        }
+    }  while (ulTotalBytesRead < SERIAL_BUFFER_SIZE  && *(pszBufPtr-1) != ';');
 
-    } while (ulTotalBytesRead < nBufferLen  && *(pszBufPtr-1) != ';');
-    
+
+#if defined PLUGIN_DEBUG
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] ulTotalBytesRead = " << ulTotalBytesRead << std::endl;
+    m_sLogFile.flush();
+#endif
+
     if(!ulTotalBytesRead)
         nErr = COMMAND_TIMEOUT; // we didn't get an answer.. so timeout
-    else
-        *(pszBufPtr-1) = 0; //remove the ;
-    
+    else if(*(pszBufPtr-1) == ';')
+        *(pszBufPtr-1) = 0; //remove the ';'
+
+    sResp.assign(pszBuf);
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 3
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [readResponse std::string] sResp : " << sResp << std::endl;
+    m_sLogFile.flush();
+#endif
+
     return nErr;
 }
-*/
+
 
 int ATCS::atclEnter()
 {
     int nErr = PLUGIN_OK;
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::stringstream ssCmd;
+    std::string sResp;
 
-    snprintf(szCmd,SERIAL_BUFFER_SIZE, "%c", ATCL_ENTER);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    ssCmd<<char(ATCL_ENTER);
+    nErr = ATCSSendCommand(ssCmd.str(), sResp);
 
-    nErr |= ATCSSendCommand("!QDcn;", szResp, SERIAL_BUFFER_SIZE);
+    nErr |= ATCSSendCommand("!QDcn;", sResp);
 
     return nErr;
 }
@@ -433,34 +521,35 @@ int ATCS::atclEnter()
 int ATCS::getFirmwareVersion(std::string &sFirmware)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
     if(!m_bIsConnected)
         return NOT_CONNECTED;
 
-    nErr = ATCSSendCommand("!HGfv;", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!HGfv;", sResp);
+
     if(nErr)
         return nErr;
 
-    sFirmware.assign(szResp);
-    m_sFirmwareVersion.assign(szResp);
+    sFirmware.assign(sResp);
+    m_sFirmwareVersion.assign(sResp);
     return nErr;
 }
 
 int ATCS::getModel(std::string &sModel)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
     if(!m_bIsConnected)
         return NOT_CONNECTED;
 
-    nErr = ATCSSendCommand("!HGsm;", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!HGsm;", sResp);
     if(nErr)
         return nErr;
 
-    sModel.assign(szResp);
-    m_sHardwareModel.assign(szResp);
+    sModel.assign(sResp);
+    m_sHardwareModel.assign(sResp);
     return nErr;
 }
 
@@ -485,21 +574,21 @@ MountTypeInterface::Type ATCS::mountType()
 int ATCS::getRaAndDec(double &dRa, double &dDec)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
     // get RA
-    nErr = ATCSSendCommand("!CGra;", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!CGra;", sResp);
     if(nErr) {
         return nErr;
     }
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getRaAndDec]  szResp : " << sResp << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getRaAndDec]  sResp : " << sResp << std::endl;
     m_sLogFile.flush();
 #endif
 
     // if not aligned we have no coordinates.
-    if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE) == 0) {
+    if(sResp.find("N/A") != -1) {
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getRaAndDec]  Not aligned yet." << std::endl;
         m_sLogFile.flush();
@@ -509,16 +598,16 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
         return nErr;
     }
 
-    nErr = convertHHMMSStToRa(szResp, dRa);
+    nErr = convertHHMMSStToRa(sResp, dRa);
     if(nErr)
         return nErr;
 
     // get DEC
-    nErr = ATCSSendCommand("!CGde;", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!CGde;", sResp);
     if(nErr)
         return nErr;
     // even if RA was ok, we need to test Dec as we might have reach park between the 2 calls
-    if(strncmp(szResp,"N/A",SERIAL_BUFFER_SIZE) == 0) {
+    if(sResp.find("N/A") != -1) {
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
         m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getRaAndDec]  Not aligned yet." << std::endl;
         m_sLogFile.flush();
@@ -526,7 +615,7 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
         dDec = 0.0f;
         return nErr;
     }
-    nErr = convertDDMMSSToDecDeg(szResp, dDec);
+    nErr = convertDDMMSSToDecDeg(sResp, dDec);
 
     return nErr;
 }
@@ -534,9 +623,11 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
 int ATCS::setTarget(double dRa, double dDec)
 {
     int nErr;
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szTemp[SERIAL_BUFFER_SIZE];
+
+    std::stringstream ssTmp;
+    std::string sCmd;
+    std::string sResp;
+    std::string sTemp;
     char cSign;
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
@@ -546,24 +637,27 @@ int ATCS::setTarget(double dRa, double dDec)
 #endif
 
     // convert Ra value to HH:MM:SS.T before passing them to the ATCS
-    convertRaToHHMMSSt(dRa, szTemp, SERIAL_BUFFER_SIZE);
+    convertRaToHHMMSSt(dRa, sTemp);
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTarget]  Ra  : " << sTemp << std::endl;
     m_sLogFile.flush();
 #endif
     // set target Ra
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStr%s;", szTemp);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    sCmd = "!CStr" + sTemp + ";";
+    nErr = ATCSSendCommand(sCmd, sResp);
 
-    convertDecDegToDDMMSS(dDec, szTemp, cSign, SERIAL_BUFFER_SIZE);
+    convertDecDegToDDMMSS(dDec, sTemp, cSign);
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTarget]  Dec : " << cSign << sTemp << std::endl;
     m_sLogFile.flush();
 #endif
     // set target dec
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!CStd%c%s;", cSign,szTemp);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+
+    sCmd.clear();
+    ssTmp << "!CStd" << cSign << sTemp << ";";
+    sCmd = ssTmp.str();
+    nErr = ATCSSendCommand(sCmd, sResp);
 
     return nErr;
 }
@@ -668,12 +762,11 @@ int ATCS::getAlignementType(std::string &sType)
 int ATCS::setAlignementType(std::string sType)
 {
     int nErr = PLUGIN_OK;
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sCmd;
+    std::string sResp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!NSat%s;", sType.c_str());
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
-
+    sCmd = "!NSat" + sType + ";";
+    nErr = ATCSSendCommand(sCmd, sResp);
     return nErr;
 }
 
@@ -681,11 +774,11 @@ int ATCS::setAlignementType(std::string sType)
 int ATCS::setMeridianAvoidMethod(std::string sType)
 {
     int nErr = PLUGIN_OK;
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sCmd;
+    std::string sResp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!NSam%s;", sType.c_str());
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    sCmd = "!NSam" + sType + ";";
+    nErr = ATCSSendCommand(sCmd, sResp);
 
     return nErr;
 }
@@ -988,7 +1081,7 @@ int ATCS::isSlewToComplete(bool &bComplete)
     if(nErr)
         return nErr;
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] szResp : " << sResp << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] szResp : " << szResp << std::endl;
     m_sLogFile.flush();
 #endif
 
@@ -996,7 +1089,7 @@ int ATCS::isSlewToComplete(bool &bComplete)
     szResp[strlen(szResp) -1 ] = 0;
     
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] sResp : " << sResp << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] szResp : " << szResp << std::endl;
     m_sLogFile.flush();
 #endif
 
@@ -1567,6 +1660,26 @@ void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsig
     snprintf(szResult, size, "%02d:%02d:%02d", DD, MM, SS);
 }
 
+void ATCS::convertDecDegToDDMMSS(double dDeg, std::string  &sResult, char &cSign)
+{
+    int DD, MM, SS;
+    double mm, ss;
+    std::stringstream ssTmp;
+
+    // convert dDeg decimal value to sDD:MM:SS
+
+    cSign = dDeg>=0?'+':'-';
+    dDeg = fabs(dDeg);
+    DD = int(dDeg);
+    mm = dDeg - DD;
+    MM = int(mm*60);
+    ss = (mm*60) - MM;
+    SS = int(std::roundf(ss*60));
+
+    ssTmp <<  std::setfill('0') << std::setw(2) << DD << ":" << std::setfill('0') << std::setw(2) << MM << ":" << std::setfill('0') << std::setw(2) << SS;
+    sResult.assign(ssTmp.str());
+}
+
 int ATCS::convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg)
 {
     int nErr = PLUGIN_OK;
@@ -1593,6 +1706,33 @@ int ATCS::convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg)
     return nErr;
 }
 
+int ATCS::convertDDMMSSToDecDeg(const std::string StrDeg, double &dDecDeg)
+{
+    int nErr = PLUGIN_OK;
+    std::vector<std::string> vFieldsData;
+
+    dDecDeg = 0;
+
+    nErr = parseFields(StrDeg, vFieldsData, ':');
+    if(nErr)
+        return nErr;
+
+    if(vFieldsData.size() >= 3) {
+        dDecDeg = std::stod(vFieldsData[0]);
+        if(dDecDeg <0) {
+            dDecDeg = dDecDeg - std::stod(vFieldsData[1])/60.0 - std::stod(vFieldsData[2])/3600.0;
+        }
+        else {
+            dDecDeg = dDecDeg + std::stod(vFieldsData[1])/60.0 + std::stod(vFieldsData[2])/3600.0;
+        }
+    }
+    else
+        nErr = ERR_PARSE;
+
+    return nErr;
+}
+
+
 void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size)
 {
     int HH, MM;
@@ -1616,6 +1756,26 @@ void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size)
     snprintf(szResult,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.1f", HH, MM, std::stod(ssTmp.str()));
 }
 
+void ATCS::convertRaToHHMMSSt(double dRa, std::string &sResult)
+{
+    int HH, MM;
+    double hh, mm, SSt;
+    std::stringstream ssTmp;
+
+    sResult.clear();
+    // convert Ra value to HH:MM:SS.S
+    HH = int(dRa);
+    hh = dRa - HH;
+    MM = int(hh*60);
+    mm = (hh*60) - MM;
+    SSt = mm * 60;
+
+    ssTmp << std::setfill('0') << std::setw(2) << HH << ":" << std::setfill('0') << std::setw(2) << MM << ":" << std::setfill('0') << std::setw(4) << std::fixed << std::setprecision(1) << SSt;
+    sResult.assign(ssTmp.str());
+
+}
+
+
 int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
 {
     int nErr = PLUGIN_OK;
@@ -1636,6 +1796,25 @@ int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
     return nErr;
 }
 
+int ATCS::convertHHMMSStToRa(const std::string StrRa, double &dRa)
+{
+    int nErr = PLUGIN_OK;
+    std::vector<std::string> vFieldsData;
+
+    dRa = 0;
+
+    nErr = parseFields(StrRa, vFieldsData, ':');
+    if(nErr)
+        return nErr;
+
+    if(vFieldsData.size() >= 3) {
+        dRa = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60.0 + atof(vFieldsData[2].c_str())/3600.0;
+    }
+    else
+        nErr = ERR_PARSE;
+
+    return nErr;
+}
 
 int ATCS::parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator)
 {
@@ -1655,4 +1834,63 @@ int ATCS::parseFields(const char *pszIn, std::vector<std::string> &svFields, cha
     }
     return nErr;
 }
+
+int ATCS::parseFields(const std::string szIn, std::vector<std::string> &svFields, char cSeparator)
+{
+    int nErr = PLUGIN_OK;
+    std::string sSegment;
+    std::stringstream ssTmp(szIn);
+
+    svFields.clear();
+    // split the string into vector elements
+    while(std::getline(ssTmp, sSegment, cSeparator))
+    {
+        svFields.push_back(sSegment);
+    }
+
+    if(svFields.size()==0) {
+        nErr = ERR_PARSE;
+    }
+    return nErr;
+}
+
+std::string& ATCS::trim(std::string &str, const std::string& filter )
+{
+    return ltrim(rtrim(str, filter), filter);
+}
+
+std::string& ATCS::ltrim(std::string& str, const std::string& filter)
+{
+    str.erase(0, str.find_first_not_of(filter));
+    return str;
+}
+
+std::string& ATCS::rtrim(std::string& str, const std::string& filter)
+{
+    str.erase(str.find_last_not_of(filter) + 1);
+    return str;
+}
+
+
+
+
+#ifdef PLUGIN_DEBUG
+void ATCS::log(std::string sLogEntry)
+{
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [log] " << sLogEntry << std::endl;
+    m_sLogFile.flush();
+
+}
+
+const std::string ATCS::getTimeStamp()
+{
+    time_t     now = time(0);
+    struct tm  tstruct;
+    char       buf[80];
+    tstruct = *localtime(&now);
+    std::strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
+
+    return buf;
+}
+#endif
 
