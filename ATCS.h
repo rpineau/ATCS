@@ -13,11 +13,18 @@
 
 // C++ includes
 #include <string>
+#include <cstring>
 #include <vector>
 #include <sstream>
 #include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <chrono>
+#include <thread>
+#include <ctime>
 #include <cmath>
 #include <iomanip>
+#include <algorithm>
 
 #include "../../licensedinterfaces/sberrorx.h"
 #include "../../licensedinterfaces/theskyxfacadefordriversinterface.h"
@@ -30,13 +37,12 @@
 #include "StopWatch.h"
 
 // #define PLUGIN_DEBUG 2   // define this to have log files, 1 = bad stuff only, 2 and up.. full debug
-#define DRIVER_VERSION 1.4
+#define PLUGIN_VERSION 1.6
 
 enum ATCSErrors {PLUGIN_OK=0, NOT_CONNECTED, ATCS_CANT_CONNECT, ATCS_BAD_CMD_RESPONSE, COMMAND_FAILED, COMMAND_TIMEOUT, ATCS_ERROR};
 
-#define SERIAL_BUFFER_SIZE 256
+#define SERIAL_BUFFER_SIZE 1024
 #define MAX_TIMEOUT 1000
-#define ATCS_LOG_BUFFER_SIZE 256
 #define ERR_PARSE   1
 
 #define MAX_READ_WAIT_TIMEOUT 25
@@ -72,7 +78,6 @@ public:
 	bool isConnected() const { return m_bIsConnected; }
 
     void setSerxPointer(SerXInterface *p) { m_pSerx = p; }
-    void setLogger(LoggerInterface *pLogger) { m_pLogger = pLogger; };
     void setTSX(TheSkyXFacadeForDriversInterface *pTSX) { m_pTsx = pTSX;};
     void setSleeper(SleeperInterface *pSleeper) { m_pSleeper = pSleeper;};
 
@@ -126,16 +131,17 @@ public:
     int getSiteData(std::string &sLongitude, std::string &sLatitude, std::string &sTimeZone); // assume all buffers have the same size
     int getTopActiveFault(std::string &sFault);
 
+#ifdef PLUGIN_DEBUG
+    void log(std::string sLogEntry);
+#endif
+
 private:
 
     SerXInterface                       *m_pSerx;
-    LoggerInterface                     *m_pLogger;
     TheSkyXFacadeForDriversInterface    *m_pTsx;
     SleeperInterface                    *m_pSleeper;
 
     bool    m_bDebugLog;
-    char    m_szLogBuffer[ATCS_LOG_BUFFER_SIZE];
-
 	bool    m_bIsConnected;                               // Connected to the mount?
     std::string m_sFirmwareVersion;
 
@@ -160,9 +166,8 @@ private:
     double  m_dHoursEast;
     double  m_dHoursWest;
     
-    int     ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen);
-    int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen, int nTimeout = MAX_TIMEOUT);
-    int     readResponse(unsigned char *respBuffer, int nBufferLen, int nTimeout = MAX_TIMEOUT);
+    int     ATCSSendCommand(const std::string sCmd, std::string &sResp, int nTimeout = MAX_TIMEOUT);
+    int     ATCSreadResponse(std::string &sResult, int nTimeout = MAX_TIMEOUT);
 
     int     atclEnter();
     int     disablePacketSeqChecking();
@@ -171,9 +176,9 @@ private:
 
     int     getUsingSiteNumber(int &nSiteNb);
     int     getUsingSiteName(int nSiteNb, std::string &sSiteName);
-    int     setSiteLongitude(int nSiteNb, const char *szLongitude);
-    int     setSiteLatitude(int nSiteNb, const char *szLatitude);
-    int     setSiteTimezone(int nSiteNb, const char *szTimezone);
+    int     setSiteLongitude(int nSiteNb, const std::string sLongitude);
+    int     setSiteLatitude(int nSiteNb, const std::string sLatitude);
+    int     setSiteTimezone(int nSiteNb, const std::string sTimezone);
 
     int     getSiteLongitude(int nSiteNb, std::string &sLongitude);
     int     getSiteLatitude(int nSiteNb, std::string &sLatitude);
@@ -198,24 +203,28 @@ private:
     int     getSoftLimitEastAngle(double &dAngle);
     int     getSoftLimitWestAngle(double &dAngle);
 
-    void    convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsigned int size);
-    int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);
-    
-    void    convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size);
-    int     convertHHMMSStToRa(const char *szStrRa, double &dRa);
+    void    convertDecDegToDDMMSS(double dDeg, std::string  &sResult, char &cSign);
 
-    int     parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator);
+    int     convertDDMMSSToDecDeg(const std::string StrDeg, double &dDecDeg);
+
+    void    convertRaToHHMMSSt(double dRa, std::string &sResult);
+
+    int     convertHHMMSStToRa(const std::string StrRa, double &dRa);
+    int     parseFields(const std::string szIn, std::vector<std::string> &svFields, char cSeparator);
 
     std::vector<std::string>    m_svSlewRateNames = { "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4",  "Slew"};
     CStopWatch      timer;
 
 
+    std::string&    trim(std::string &str, const std::string &filter );
+    std::string&    ltrim(std::string &str, const std::string &filter);
+    std::string&    rtrim(std::string &str, const std::string &filter);
+
+
 #ifdef PLUGIN_DEBUG
+    const std::string getTimeStamp();
+    std::ofstream m_sLogFile;
     std::string m_sLogfilePath;
-	// timestamp for logs
-    char *timestamp;
-	time_t ltime;
-	FILE *Logfile;	  // LogFile
 #endif
 	
 };

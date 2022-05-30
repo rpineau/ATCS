@@ -43,7 +43,6 @@ X2Mount::X2Mount(const char* pszDriverSelection,
     mATCS.setSerxPointer(m_pSerX);
     mATCS.setTSX(m_pTheSkyXForMounts);
     mATCS.setSleeper(m_pSleeper);
-    mATCS.setLogger(m_pLogger);
 
     m_CurrentRateIndex = 0;
 
@@ -433,7 +432,7 @@ void	X2Mount::driverInfoDetailedInfo(BasicStringInterface& str) const
 
 double	X2Mount::driverInfoVersion(void) const
 {
-	return DRIVER_VERSION;
+	return PLUGIN_VERSION;
 }
 
 void X2Mount::deviceInfoNameShort(BasicStringInterface& str) const
