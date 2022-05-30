@@ -84,13 +84,10 @@ int ATCS::Connect(char *pszPort)
             return ERR_NOLINK;
         }
     }
+    setAsyncUpdateEnabled(false);
     disablePacketSeqChecking();
 	disableStaticStatusChangeNotification();
-
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    // disable any async message from the controller for debug mode
-    setAsyncUpdateEnabled(false);
-#endif
+    m_pSerx->purgeTxRx();
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     m_sLogFile << "["<<getTimeStamp()<<"]"<< " [Connect] m_mountType " << m_mountType << std::endl;
@@ -120,16 +117,17 @@ int ATCS::Connect(char *pszPort)
     m_bJNOW = true;
     setEpochOfEntry("Now");
 
+    nErr = getLocalTimeFormat(m_b24h);
+    nErr = getDateFormat(m_bDdMmYy);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [Connect] Time format : " << (m_b24h?"24H":"12H") << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [Connect] Date format : " << (m_bDdMmYy?"D/M/Y":"M/D/Y") << std::endl;
+    m_sLogFile.flush();
+#endif
+
     // do we need to set the time ?
     nErr = checkSiteTimeDateSetOnce(m_bTimeSetOnce);
     if(!nErr) {
-        nErr = getLocalTimeFormat(m_b24h);
-        nErr = getDateFormat(m_bDdMmYy);
-
-        // debug
-        getStandardTime(m_sTime);
-        getStandardDate(m_sDate);
-
         if(!m_bTimeSetOnce) {
             nErr = syncTime();
             nErr = syncDate();
@@ -202,85 +200,12 @@ int ATCS::getRateName(int nZeroBasedIndex, std::string &sOut)
 
 #pragma mark - ATCS communication
 
-int ATCS::ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen)
-{
-    int nErr = PLUGIN_OK;
-    unsigned char szResp[SERIAL_BUFFER_SIZE];
-    unsigned long ulBytesWrite;
-    bool resp_ok = false;
-
-    // m_pSerx->purgeTxRx();  // <=== can't do this because of async messages.
-
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand] sending " << pszCmd << std::endl;
-    m_sLogFile.flush();
-#endif
-
-    nErr = m_pSerx->writeFile((void *)pszCmd, strlen(pszCmd), ulBytesWrite);
-    m_pSerx->flushTx();
-    if(nErr)
-        return nErr;
-    // read response
-    while(!resp_ok) {
-        nErr = ATCSreadResponse(szResp, SERIAL_BUFFER_SIZE, MAX_TIMEOUT);
-        if(nErr) {
-
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-            if(int(szResp[0]) == ATCL_NACK )
-                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand] ERROR reading response , ATCL_NACK received " << std::endl;
-            else
-                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand] ERROR " << nErr<< " reading response :" << szResp << std::endl;
-            m_sLogFile.flush();
-#endif
-            return nErr;
-        }
-
-        // filter out async status and log them in debug mode
-        if(szResp[0] == ATCL_STATUS ||
-           szResp[0] == ATCL_WARNING ||
-           szResp[0] == ATCL_ALERT ||
-           szResp[0] == ATCL_INTERNAL_ERROR ||
-           szResp[0] == ATCL_IDC_ASYNCH
-           ) {
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-            m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand] Async message :  " << szResp+1 << std::endl;
-            m_sLogFile.flush();
-#endif
-
-        }
-        else {
-            if(szResp[0] == ATCL_SYNTAX_ERROR) { // not async but we need to log it
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-                m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand] Async message :  " << szResp+1 << std::endl;
-                m_sLogFile.flush();
-#endif
-            }
-            resp_ok = true;
-        }
-    } // end while(!resp_ok)
-
-    if(pszResult)
-        strncpy(pszResult, (const char *)szResp, nResultMaxLen);
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    if(int(szResp[0]) == ATCL_ACK )
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got ATCL_ACK : " << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)(szResp[0]) << std::endl;
-    else if(int(szResp[0]) == ATCL_NACK )
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got ATCL_NACK : " << std::uppercase << std::setfill('0') << std::setw(2) << std::hex << (unsigned int)(szResp[0]) << std::endl;
-    else {
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand]  got response : " << szResp << std::endl;
-    }
-    m_sLogFile.flush();
-    m_sLogFile << std::dec;
-#endif
-
-    return nErr;
-}
-
 int ATCS::ATCSSendCommand(const std::string sCmd, std::string &sResp, int nTimeout)
 {
     int nErr = PLUGIN_OK;
     unsigned long  ulBytesWrite;
     bool resp_ok = false;
+
     sResp.clear();
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSSendCommand std::string] sending " << sCmd << std::endl;
@@ -352,53 +277,6 @@ int ATCS::ATCSSendCommand(const std::string sCmd, std::string &sResp, int nTimeo
     return nErr;
 }
 
-
-int ATCS::ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int nBufferLen, int nTimeout)
-{
-    int nErr = PLUGIN_OK;
-    unsigned long ulBytesRead = 0;
-    unsigned long ulTotalBytesRead = 0;
-    unsigned char *pszBufPtr;
-
-    memset(pszRespBuffer, 0, (size_t) nBufferLen);
-    pszBufPtr = pszRespBuffer;
-
-    do {
-        nErr = m_pSerx->readFile(pszBufPtr, 1, ulBytesRead, nTimeout);
-        if(nErr) {
-            return nErr;
-        }
-
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 3
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [ATCSreadResponse]  *pszBufPtr : " << std::hex << *pszBufPtr << std::endl;
-        m_sLogFile.flush();
-        m_sLogFile << std::dec;
-#endif
-
-        if (ulBytesRead !=1) {// timeout
-            nErr = ATCS_BAD_CMD_RESPONSE;
-            break;
-        }
-        ulTotalBytesRead += ulBytesRead;
-        // check for  errors or single ACK
-        if(*pszBufPtr == ATCL_NACK) {
-            nErr = ATCS_BAD_CMD_RESPONSE;
-            break;
-        }
-
-        if(*pszBufPtr == ATCL_ACK) {
-            nErr = PLUGIN_OK;
-            break;
-        }
-
-
-    } while (*pszBufPtr++ != ';' && ulTotalBytesRead < nBufferLen );
-
-    if(ulTotalBytesRead && *(pszBufPtr-1) == ';')
-        *(pszBufPtr-1) = 0; //remove the ; to zero terminate the string
-
-    return nErr;
-}
 
 int ATCS::ATCSreadResponse(std::string &sResp, int nTimeout)
 {
@@ -511,6 +389,11 @@ int ATCS::atclEnter()
     std::stringstream ssCmd;
     std::string sResp;
 
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [atclEnter] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
     ssCmd<<char(ATCL_ENTER);
     nErr = ATCSSendCommand(ssCmd.str(), sResp);
 
@@ -530,6 +413,11 @@ int ATCS::getFirmwareVersion(std::string &sFirmware)
     if(!m_bIsConnected)
         return NOT_CONNECTED;
 
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getFirmwareVersion] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
     nErr = ATCSSendCommand("!HGfv;", sResp);
 
     if(nErr)
@@ -547,6 +435,11 @@ int ATCS::getModel(std::string &sModel)
 
     if(!m_bIsConnected)
         return NOT_CONNECTED;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getModel] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     nErr = ATCSSendCommand("!HGsm;", sResp);
     if(nErr)
@@ -579,6 +472,11 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
 {
     int nErr = PLUGIN_OK;
     std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getRaAndDec] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     // get RA
     nErr = ATCSSendCommand("!CGra;", sResp);
@@ -621,6 +519,12 @@ int ATCS::getRaAndDec(double &dRa, double &dDec)
     }
     nErr = convertDDMMSSToDecDeg(sResp, dDec);
 
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getRaAndDec] dRa  : " << dRa << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getRaAndDec] dDec : " << dDec << std::endl;
+    m_sLogFile.flush();
+#endif
+
     return nErr;
 }
 
@@ -658,10 +562,8 @@ int ATCS::setTarget(double dRa, double dDec)
 #endif
     // set target dec
 
-    sCmd.clear();
     ssTmp << "!CStd" << cSign << sTemp << ";";
-    sCmd = ssTmp.str();
-    nErr = ATCSSendCommand(sCmd, sResp);
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
 
     return nErr;
 }
@@ -716,16 +618,28 @@ int ATCS::syncTo(double dRa, double dDec)
 int ATCS::calFromTargetRA_DecEpochNow()
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    nErr = ATCSSendCommand("!ACrn;", szResp, SERIAL_BUFFER_SIZE);
+    std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [calFromTargetRA_DecEpochNow] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!ACrn;", sResp);
     return nErr;
 }
 
 int ATCS::calFromTargetRA_Dec()
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    nErr = ATCSSendCommand("!ACrd;", szResp, SERIAL_BUFFER_SIZE);
+    std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [calFromTargetRA_Dec] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!ACrd;", sResp);
     return nErr;
 }
 
@@ -733,18 +647,25 @@ int ATCS::calFromTargetRA_Dec()
 int ATCS::isAligned(bool &bAligned)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!AGas;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isAligned] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!AGas;", sResp);
     if(nErr)
         return nErr;
-
-    if(strncmp(szResp,"NotAligned",SERIAL_BUFFER_SIZE) == 0)
+    if(sResp.find("NotAligned") != -1) {
         bAligned = false;
-    else if(strncmp(szResp,"Preliminary",SERIAL_BUFFER_SIZE) == 0)
+    }
+    else if(sResp.find("Preliminary") != -1) {
         bAligned = false;
-    else if(strncmp(szResp,"Complete",SERIAL_BUFFER_SIZE) == 0)
+    }
+    else if(sResp.find("Complete") != -1) {
         bAligned = true;
+    }
     else
         bAligned = false;
 
@@ -754,12 +675,18 @@ int ATCS::isAligned(bool &bAligned)
 int ATCS::getAlignementType(std::string &sType)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!NGat;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getAlignementType] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!NGat;", sResp);
     if(nErr)
         return nErr;
-    sType.assign(szResp);
+
+    sType.assign(sResp);
     return nErr;
 }
 
@@ -768,6 +695,11 @@ int ATCS::setAlignementType(std::string sType)
     int nErr = PLUGIN_OK;
     std::string sCmd;
     std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setAlignementType] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     sCmd = "!NSat" + sType + ";";
     nErr = ATCSSendCommand(sCmd, sResp);
@@ -781,6 +713,11 @@ int ATCS::setMeridianAvoidMethod(std::string sType)
     std::string sCmd;
     std::string sResp;
 
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setMeridianAvoidMethod] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
     sCmd = "!NSam" + sType + ";";
     nErr = ATCSSendCommand(sCmd, sResp);
 
@@ -790,12 +727,18 @@ int ATCS::setMeridianAvoidMethod(std::string sType)
 int ATCS::getMeridianAvoidMethod(std::string &sType)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!NGam;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getMeridianAvoidMethod] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!NGam;", sResp);
     if(nErr)
         return nErr;
-    sType.assign(szResp);
+
+    sType.assign(sResp);
     return nErr;
 }
 
@@ -804,25 +747,31 @@ int ATCS::getMeridianAvoidMethod(std::string &sType)
 int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaArcSecPerHr, double dTrackDecArcSecPerHr)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     if(!bTrackingOn) { // stop tracking
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] setting to Drift." << nErr << std::endl;
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] setting to Drift." << std::endl;
         m_sLogFile.flush();
 #endif
-        nErr = ATCSSendCommand("!RStrDrift;", szResp, SERIAL_BUFFER_SIZE);
+        nErr = ATCSSendCommand("!RStrDrift;", sResp);
+
     }
     else if(bTrackingOn && bIgnoreRates) { // sidereal
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] setting to Sidereal." << nErr << std::endl;
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] setting to Sidereal." << std::endl;
         m_sLogFile.flush();
 #endif
-        nErr = ATCSSendCommand("!RStrSidereal;", szResp, SERIAL_BUFFER_SIZE);
+        nErr = ATCSSendCommand("!RStrSidereal;", sResp);
     }
     else { // custom rate
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] setting to Custom." << nErr << std::endl;
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] setting to Custom." << std::endl;
         m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] dTrackRaArcSecPerHr  : " << std::fixed << std::setprecision(12) << dTrackRaArcSecPerHr << std::endl;
         m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setTrackingRates] dTrackDecArcSecPerHr : " << std::fixed << std::setprecision(12) << dTrackDecArcSecPerHr << std::endl;
         m_sLogFile.flush();
@@ -832,7 +781,7 @@ int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaA
         if(nErr) {
             return nErr; // if we cant set the rate no need to switch to custom.
         }
-        nErr = ATCSSendCommand("!RStrCustom;", szResp, SERIAL_BUFFER_SIZE);
+        nErr = ATCSSendCommand("!RStrCustom;", sResp);
     }
     return nErr;
 }
@@ -840,11 +789,16 @@ int ATCS::setTrackingRates(bool bTrackingOn, bool bIgnoreRates, double dTrackRaA
 int ATCS::getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &dTrackDecArcSecPerHr)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!RGtr;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getTrackRates] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!RGtr;", sResp);
     bTrackingOn = true;
-    if(strncmp(szResp, "Drift", SERIAL_BUFFER_SIZE)==0) {
+    if(sResp.find("Drift") != -1) {
         bTrackingOn = false;
     }
     nErr = getCustomTRateOffsetRA(dTrackRaArcSecPerHr);
@@ -856,11 +810,16 @@ int ATCS::getTrackRates(bool &bTrackingOn, double &dTrackRaArcSecPerHr, double &
 int ATCS::setCustomTRateOffsetRA(double dRa)
 {
     int nErr;
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!RSor%.2f;", dRa);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setCustomTRateOffsetRA] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    ssTmp << "!RSor" << std::fixed << std::setprecision(2) << dRa << ";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
     if(nErr) {
 #if defined PLUGIN_DEBUG
         m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setCustomTRateOffsetRA] Error setting Ra tracking rate to " << std::fixed << std::setprecision(12) <<  dRa << std::endl;
@@ -873,14 +832,19 @@ int ATCS::setCustomTRateOffsetRA(double dRa)
 int ATCS::setCustomTRateOffsetDec(double dDec)
 {
     int nErr;
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!RSod%.2f;", dDec);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setCustomTRateOffsetDec] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    ssTmp << "!RSod" << std::fixed << std::setprecision(2) << dDec << ";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
     if(nErr) {
 #if defined PLUGIN_DEBUG
-        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setCustomTRateOffsetRA] Error setting Dec tracking rate to " << std::fixed << std::setprecision(12) <<  dDec << std::endl;
+        m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setCustomTRateOffsetDec] Error setting Dec tracking rate to " << std::fixed << std::setprecision(12) <<  dDec << std::endl;
         m_sLogFile.flush();
 #endif
     }
@@ -890,12 +854,17 @@ int ATCS::setCustomTRateOffsetDec(double dDec)
 int ATCS::getCustomTRateOffsetRA(double &dTrackRaArcSecPerHr)
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!RGor;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getCustomTRateOffsetRA] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!RGor;", sResp);
     if(nErr)
         return nErr;
-    dTrackRaArcSecPerHr = atof(szResp);
+    dTrackRaArcSecPerHr = std::stof(sResp);
 
     return nErr;
 }
@@ -903,12 +872,17 @@ int ATCS::getCustomTRateOffsetRA(double &dTrackRaArcSecPerHr)
 int ATCS::getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr)
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!RGod;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getCustomTRateOffsetDec] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!RGod;", sResp);
     if(nErr)
         return nErr;
-    dTrackDecArcSecPerHr = atof(szResp);
+    dTrackDecArcSecPerHr = std::stof(sResp);
 
     return nErr;
 }
@@ -945,12 +919,17 @@ int ATCS::getLimits(double &dHoursEast, double &dHoursWest)
 int ATCS::getSoftLimitEastAngle(double &dAngle)
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!NGle;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getSoftLimitEastAngle] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!NGle;", sResp);
     if(nErr)
         return nErr;
-    dAngle = atof(szResp);
+    dAngle = std::stof(sResp);
 
     return nErr;
 }
@@ -958,12 +937,17 @@ int ATCS::getSoftLimitEastAngle(double &dAngle)
 int ATCS::getSoftLimitWestAngle(double &dAngle)
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!NGlw;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getSoftLimitWestAngle] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!NGlw;", sResp);
     if(nErr)
         return nErr;
-    dAngle = atof(szResp);
+    dAngle = std::stof(sResp);
 
     return nErr;
 }
@@ -991,10 +975,14 @@ int ATCS::startSlewTo(double dRa, double dDec)
 int ATCS::slewTargetRA_DecEpochNow()
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!GTrn;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [slewTargetRA_DecEpochNow] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
+    nErr = ATCSSendCommand("!GTrn;", sResp);
     timer.Reset();
     return nErr;
 
@@ -1003,8 +991,9 @@ int ATCS::slewTargetRA_DecEpochNow()
 int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, unsigned int nRate)
 {
     int nErr = PLUGIN_OK;
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
+
 
     m_nOpenLoopDir = Dir;
 
@@ -1016,28 +1005,29 @@ int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, unsigned int nR
 
     // select rate
     if(nRate == 4) { // "Slew"
-        nErr = ATCSSendCommand("!KSsl;", szResp, SERIAL_BUFFER_SIZE);
+        nErr = ATCSSendCommand("!KSsl;", sResp);
     }
     else {
         // clear slew
-        nErr = ATCSSendCommand("!KCsl;", szResp, SERIAL_BUFFER_SIZE);
+        nErr = ATCSSendCommand("!KCsl;", sResp);
         // select rate
         // KScv + 1,2 3 or 4 for ViewVel 1,2,3,4, 'ViewVel 1' is index 0 so nRate+1
-        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!KScv%d;", nRate+1);
+        ssTmp << "!KScv" << (nRate+1) << ";";
+        nErr = ATCSSendCommand(ssTmp.str(), sResp);
     }
     // figure out direction
     switch(Dir){
         case MountDriverInterface::MD_NORTH:
-            nErr = ATCSSendCommand("!KSpu100;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!KSpu100;", sResp);
             break;
         case MountDriverInterface::MD_SOUTH:
-            nErr = ATCSSendCommand("!KSpd100;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!KSpd100;", sResp);
             break;
         case MountDriverInterface::MD_EAST:
-            nErr = ATCSSendCommand("!KSpl100;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!KSpl100;", sResp);
             break;
         case MountDriverInterface::MD_WEST:
-            nErr = ATCSSendCommand("!KSsr100;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!KSsr100;", sResp);
             break;
     }
 
@@ -1047,7 +1037,7 @@ int ATCS::startOpenSlew(const MountDriverInterface::MoveDir Dir, unsigned int nR
 int ATCS::stopOpenLoopMove()
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     m_sLogFile << "["<<getTimeStamp()<<"]"<< " [stopOpenLoopMove] dir was " << m_nOpenLoopDir << std::endl;
@@ -1057,11 +1047,11 @@ int ATCS::stopOpenLoopMove()
     switch(m_nOpenLoopDir){
         case MountDriverInterface::MD_NORTH:
         case MountDriverInterface::MD_SOUTH:
-            nErr = ATCSSendCommand("!XXud;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!XXud;", sResp);
             break;
         case MountDriverInterface::MD_EAST:
         case MountDriverInterface::MD_WEST:
-            nErr = ATCSSendCommand("!XXlr;", szResp, SERIAL_BUFFER_SIZE);
+            nErr = ATCSSendCommand("!XXlr;", sResp);
             break;
     }
 
@@ -1071,7 +1061,7 @@ int ATCS::stopOpenLoopMove()
 int ATCS::isSlewToComplete(bool &bComplete)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
     int nPrecentRemaining;
 
     bComplete = false;
@@ -1081,25 +1071,35 @@ int ATCS::isSlewToComplete(bool &bComplete)
         return nErr;
     }
 
-    nErr = ATCSSendCommand("!GGgr;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!GGgr;", sResp);
     if(nErr)
         return nErr;
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] szResp : " << szResp << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] szResp : " << sResp << std::endl;
     m_sLogFile.flush();
 #endif
 
     // remove the %
-    szResp[strlen(szResp) -1 ] = 0;
-    
+    sResp = rtrim(sResp, "%");
+
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] szResp : " << szResp << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] szResp : " << sResp << std::endl;
     m_sLogFile.flush();
 #endif
 
-    nPrecentRemaining = atoi(szResp);
+    nPrecentRemaining = std::stoi(sResp);
     if(nPrecentRemaining == 0)
         bComplete = true;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [isSlewToComplete] Slew is finished  : " << (bComplete?"Yes":"No") << std::endl;
+    m_sLogFile.flush();
+#endif
 
     return nErr;
 }
@@ -1107,12 +1107,15 @@ int ATCS::isSlewToComplete(bool &bComplete)
 int ATCS::gotoPark(double dRa, double dDec)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    // set park position ?
-    // or goto ?
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [gotoPark] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
     // goto park
-    nErr = ATCSSendCommand("!GTop;", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!GTop;", sResp);
 
     return nErr;
 }
@@ -1120,9 +1123,14 @@ int ATCS::gotoPark(double dRa, double dDec)
 int ATCS::markParkPosition()
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!AMpp;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [markParkPosition] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!AMpp;", sResp);
 
     return nErr;
 
@@ -1131,11 +1139,16 @@ int ATCS::markParkPosition()
 int ATCS::getAtPark(bool &bParked)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getAtPark] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     bParked = false;
-    nErr = ATCSSendCommand("!AGak;", szResp, SERIAL_BUFFER_SIZE);
-    if(strncmp(szResp,"Yes",SERIAL_BUFFER_SIZE) == 0) {
+    nErr = ATCSSendCommand("!AGak;", sResp);
+    if(sResp.find("Yes") != -1) {
         bParked = true;
     }
     return nErr;
@@ -1145,6 +1158,11 @@ int ATCS::unPark()
 {
     int nErr = PLUGIN_OK;
     bool bAligned;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [unPark] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     // are we aligned ?
     nErr = isAligned(bAligned);
@@ -1186,9 +1204,15 @@ int ATCS::getRefractionCorrEnabled(bool &bEnabled)
 {
     int nErr = PLUGIN_OK;
     char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getRefractionCorrEnabled] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     bEnabled = false;
-    nErr = ATCSSendCommand("!PGre;", szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand("!PGre;", sResp);
     if(strncmp(szResp,"Yes",SERIAL_BUFFER_SIZE) == 0) {
         bEnabled = true;
     }
@@ -1198,18 +1222,24 @@ int ATCS::getRefractionCorrEnabled(bool &bEnabled)
 int ATCS::setRefractionCorrEnabled(bool bEnable)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sCmd;
+    std::string sResp;
 
     if(!m_bIsConnected)
         return NOT_CONNECTED;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setRefractionCorrEnabled] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
     if(bEnable) {
-        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!PSreYes;");
+        sCmd = "!PSreYes;";
     }
     else  {
-        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!PSreNo;");
+        sCmd = "!PSreNo;";
     }
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand(sCmd, sResp);
 
     return nErr;
 }
@@ -1218,9 +1248,14 @@ int ATCS::setRefractionCorrEnabled(bool bEnable)
 int ATCS::Abort()
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!XXxx;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [Abort] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!XXxx;", sResp);
     return nErr;
 }
 
@@ -1232,26 +1267,38 @@ int ATCS::syncTime()
     double sec;
     int n12h_time;
 
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szTemp[SERIAL_BUFFER_SIZE];
-    char szAmPm[4];
+    std::string sCmd;
+    std::string sResp;
+    std::stringstream ssTmp;
+    std::string sAmPm;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [syncTime] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     m_pTsx->localDateTime(yy, mm, dd, h, min, sec, dst);
     if(!m_b24h) {
         n12h_time = h%12;
         if(h<12)
-            strncpy(szAmPm,"AM",4);
+            sAmPm = "AM";
         else
-            strncpy(szAmPm,"PM",4);
-        snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.2f%s", n12h_time, min, sec, szAmPm);
+            sAmPm = "PM";
+
+        ssTmp << std::setfill('0') << std::setw(2) << n12h_time << ":" << std::setfill('0') << std::setw(2) << min << ":" << std::setfill('0') << std::setw(5) << std::fixed << std::setprecision(2) << sec << sAmPm;
     }
     else {
-        snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.2f", h, min, sec);
+        ssTmp << std::setfill('0') << std::setw(2) << h << ":" << std::setfill('0') << std::setw(2) << min << ":" << std::setfill('0') << std::setw(5) << std::fixed << std::setprecision(2) << sec;
     }
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSst%s;", szTemp);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    sCmd = "!TSst" + ssTmp.str() + ";";
+#ifdef PLUGIN_DEBUG
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [syncTime] setting time to : " << ssTmp.str() << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [syncTime] Command is  : " << sCmd << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand(sCmd, sResp);
     getStandardTime(m_sTime);
 
     return nErr;
@@ -1264,23 +1311,35 @@ int ATCS::syncDate()
     int yy, mm, dd, h, min, dst;
     double sec;
 
-    char szCmd[SERIAL_BUFFER_SIZE];
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szTemp[SERIAL_BUFFER_SIZE];
+    std::string sCmd;
+    std::string sResp;
+    std::stringstream ssTmp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [syncDate] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     m_pTsx->localDateTime(yy, mm, dd, h, min, sec, dst);
     // yy is actually yyyy, need conversion to yy, 2017 -> 17
     yy = yy - (int(yy / 1000) * 1000);
 
     if(!m_bDdMmYy) {
-        snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d/%02d/%02d", mm, dd, yy);
+        ssTmp << std::setfill('0') << std::setw(2) << mm << "/" << std::setfill('0') << std::setw(2) << dd << "/" << std::setfill('0') << std::setw(2) << yy;
     }
     else {
-        snprintf(szTemp,SERIAL_BUFFER_SIZE, "%02d/%02d/%02d", dd, mm, yy);
+        ssTmp << std::setfill('0') << std::setw(2) << dd << "/" << std::setfill('0') << std::setw(2) << mm << "/" << std::setfill('0') << std::setw(2) << yy;
     }
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!TSsd%s;", szTemp);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    sCmd = "!TSsd" + ssTmp.str() + ";";
+
+#ifdef PLUGIN_DEBUG
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [syncDate] setting time to : " << ssTmp.str() << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [syncDate] Command is  : " << sCmd << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand(sCmd, sResp);
 
     getStandardDate(m_sDate);
     return nErr;
@@ -1303,12 +1362,14 @@ int ATCS::getSiteName(std::string &sSiteName)
 int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
 {
     int nErr = PLUGIN_OK;
-    char szLong[SERIAL_BUFFER_SIZE];
-    char szLat[SERIAL_BUFFER_SIZE];
-    char szTimeZone[SERIAL_BUFFER_SIZE];
-    char szHH[3], szMM[3];
     char cSignLong;
     char cSignLat;
+    std::string sLong;
+    std::string sLat;
+    std::string sTimeZone;
+    std::string sHH;
+    std::string sMM;
+    std::stringstream ssTmp;
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
     m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteData] dLongitude " << std::fixed << std::setprecision(12) << dLongitude << std::endl;
@@ -1317,51 +1378,60 @@ int ATCS::setSiteData(double dLongitude, double dLatitute, double dTimeZone)
     m_sLogFile.flush();
 #endif
 
-    convertDecDegToDDMMSS(dLongitude, szLong, cSignLong, SERIAL_BUFFER_SIZE);
-    convertDecDegToDDMMSS(dLatitute, szLat, cSignLat, SERIAL_BUFFER_SIZE);
-    snprintf(szHH,3,"%02d", int(fabs(dTimeZone)));
-    snprintf(szMM,3,"%02d", int((fabs(dTimeZone) - int(fabs(dTimeZone)))) * 100);
-    
+    convertDecDegToDDMMSS(dLongitude, sLong, cSignLong);
+    convertDecDegToDDMMSS(dLatitute, sLat, cSignLat);
+    ssTmp<< std::setfill('0') << std::setw(2) << int(fabs(dTimeZone));
+    sHH = ssTmp.str();
+    std::stringstream().swap(ssTmp);
+    ssTmp<< std::setfill('0') << std::setw(2) << (int((fabs(dTimeZone) - int(fabs(dTimeZone)))) * 100);
+    sMM = ssTmp.str();
+
     if(dTimeZone<0) {
-        snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "%s:%sW", szHH, szMM);
+        sTimeZone = sHH + ":" + sMM + "W";
     }
     else if (dTimeZone>0) {
-        snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "%s:%sE", szHH, szMM);
+        sTimeZone = sHH + ":" + sMM + "E";
     }
     else
-        snprintf(szTimeZone, SERIAL_BUFFER_SIZE, "00:00");
+        sTimeZone = "00:00";
 
     // Set the W/E
     if(dLongitude<0) {
-        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sW", szLong);
+        sLong += "W";
     }
     else {
-        snprintf(szLong, SERIAL_BUFFER_SIZE, "%sE", szLong);
+        sLong += "E";
     }
+
     // convert signed latitude to N/S
     if(dLatitute>=0) {
-        snprintf(szLat, SERIAL_BUFFER_SIZE, "%sN", szLat);
+        sLat += "N";
     }
     else {
-        snprintf(szLat, SERIAL_BUFFER_SIZE, "%sS", szLat);
+        sLat += "S";
     }
 
 #if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteData] dLongitude " << szLong << std::endl;
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteData] dLatitute " << szLat << std::endl;
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteData] dTimeZone " << szTimeZone << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteData] dLongitude " << sLong << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteData] dLatitute " << sLat << std::endl;
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteData] dTimeZone " << sTimeZone << std::endl;
     m_sLogFile.flush();
 #endif
 
-    nErr = setSiteLongitude(m_nSiteNumber, szLong);
-    nErr |= setSiteLatitude(m_nSiteNumber, szLat);
-    nErr |= setSiteTimezone(m_nSiteNumber, szTimeZone);
+    nErr = setSiteLongitude(m_nSiteNumber, sLong);
+    nErr |= setSiteLatitude(m_nSiteNumber, sLat);
+    nErr |= setSiteTimezone(m_nSiteNumber, sTimeZone);
 
     return nErr;
 }
 int ATCS::getSiteData(std::string &sLongitude, std::string &sLatitude, std::string &sTimeZone)
 {
     int nErr = PLUGIN_OK;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getSiteData] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     nErr = getSiteLongitude(m_nSiteNumber, sLongitude);
     nErr |= getSiteLatitude(m_nSiteNumber, sLatitude);
@@ -1374,21 +1444,31 @@ int ATCS::getSiteData(std::string &sLongitude, std::string &sLatitude, std::stri
 int ATCS::getTopActiveFault(std::string &sFault)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!HGtf;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getTopActiveFault] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!HGtf;", sResp);
     if(nErr)
         return nErr;
-    sFault.assign(szResp);
+    sFault.assign(sResp);
     return nErr;
 }
 
 int ATCS::disablePacketSeqChecking()
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!QDps;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [disablePacketSeqChecking] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!QDps;", sResp);
 
     return nErr;
 }
@@ -1396,10 +1476,14 @@ int ATCS::disablePacketSeqChecking()
 int ATCS::disableStaticStatusChangeNotification()
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
-    
-    nErr = ATCSSendCommand("!QDcn;", szResp, SERIAL_BUFFER_SIZE);
-    
+    std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [disableStaticStatusChangeNotification] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!QDcn;", sResp);
     return nErr;
 }
 
@@ -1407,11 +1491,16 @@ int ATCS::disableStaticStatusChangeNotification()
 int ATCS::checkSiteTimeDateSetOnce(bool &bSet)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [checkSiteTimeDateSetOnce] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
     bSet = false;
-    nErr = ATCSSendCommand("!ACst;", szResp, SERIAL_BUFFER_SIZE);
-    if(strncmp(szResp,"Yes",SERIAL_BUFFER_SIZE) == 0) {
+    nErr = ATCSSendCommand("!ACst;", sResp);
+    if(sResp.find("Yes") != -1) {
         bSet = true;
     }
     return nErr;
@@ -1420,13 +1509,18 @@ int ATCS::checkSiteTimeDateSetOnce(bool &bSet)
 int ATCS::getUsingSiteNumber(int &nSiteNb)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!SGuu;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getUsingSiteNumber] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!SGuu;", sResp);
     if(nErr)
         return nErr;
 
-    nSiteNb = atoi(szResp);
+    nSiteNb = std::stoi(sResp);
     m_nSiteNumber = nSiteNb;
     return nErr;
 
@@ -1435,49 +1529,69 @@ int ATCS::getUsingSiteNumber(int &nSiteNb)
 int ATCS::getUsingSiteName(int nSiteNb, std::string &sSiteName)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGun%d;", nSiteNb);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getUsingSiteName] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    ssTmp << "!SGun" << nSiteNb <<";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
     if(nErr)
         return nErr;
-    sSiteName.assign(szResp);
+    sSiteName.assign(sResp);
     return nErr;
 }
 
-int ATCS::setSiteLongitude(int nSiteNb, const char *szLongitude)
+int ATCS::setSiteLongitude(int nSiteNb, const std::string sLongitude)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SSo%d%s;", nSiteNb, szLongitude);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteLongitude] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
-    return nErr;
-}
-
-int ATCS::setSiteLatitude(int nSiteNb, const char *szLatitude)
-{
-    int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
-
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SSa%d%s;", nSiteNb, szLatitude);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    ssTmp << "!SSo" << nSiteNb << sLongitude <<";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
 
     return nErr;
 }
 
-int ATCS::setSiteTimezone(int nSiteNb, const char *szTimezone)
+int ATCS::setSiteLatitude(int nSiteNb, const std::string sLatitude)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SSz%d%s;", nSiteNb, szTimezone);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteLatitude] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    ssTmp << "!SSa" << nSiteNb << sLatitude <<";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
+
+    return nErr;
+}
+
+int ATCS::setSiteTimezone(int nSiteNb, const std::string sTimezone)
+{
+    int nErr = PLUGIN_OK;
+    std::string sResp;
+    std::stringstream ssTmp;
+
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setSiteTimezone] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    ssTmp << "!SSz" << nSiteNb << sTimezone <<";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
 
     return nErr;
 }
@@ -1485,13 +1599,18 @@ int ATCS::setSiteTimezone(int nSiteNb, const char *szTimezone)
 int ATCS::getSiteLongitude(int nSiteNb, std::string &sLongitude)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGo%d;", nSiteNb);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getSiteLongitude] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    ssTmp << "!SGo" << nSiteNb <<";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
     if(!nErr) {
-        sLongitude.assign(szResp);
+        sLongitude.assign(sResp);
     }
     return nErr;
 }
@@ -1499,13 +1618,18 @@ int ATCS::getSiteLongitude(int nSiteNb, std::string &sLongitude)
 int ATCS::getSiteLatitude(int nSiteNb, std::string &sLatitude)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGa%d;", nSiteNb);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getSiteLatitude] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    ssTmp << "!SGa" << nSiteNb <<";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
     if(!nErr) {
-        sLatitude.assign(szResp);
+        sLatitude.assign(sResp);
     }
 
     return nErr;
@@ -1514,13 +1638,18 @@ int ATCS::getSiteLatitude(int nSiteNb, std::string &sLatitude)
 int ATCS::getSiteTZ(int nSiteNb, std::string &sTimeZone)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!SGz%d;", nSiteNb);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getSiteTZ] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    ssTmp << "!SGz" << nSiteNb <<";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
     if(!nErr) {
-        sTimeZone.assign(szResp);
+        sTimeZone.assign(sResp);
     }
 
     return nErr;
@@ -1532,13 +1661,19 @@ int ATCS::getSiteTZ(int nSiteNb, std::string &sTimeZone)
 int ATCS::getLocalTimeFormat(bool &b24h)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!TGlf;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getLocalTimeFormat] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!TGlf;", sResp);
+
     if(nErr)
         return nErr;
     b24h = false;
-    if(strncmp(szResp,"24hr",SERIAL_BUFFER_SIZE) == 0) {
+    if(sResp.find("24hr") != -1) {
         b24h = true;
     }
 
@@ -1548,13 +1683,18 @@ int ATCS::getLocalTimeFormat(bool &b24h)
 int ATCS::getDateFormat(bool &bDdMmYy )
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!TGdf;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getDateFormat] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!TGdf;", sResp);
     if(nErr)
         return nErr;
     bDdMmYy = false;
-    if(strncmp(szResp,"dd/mm/yy",SERIAL_BUFFER_SIZE) == 0) {
+    if(sResp.find("dd/mm/yy") != -1) {
         bDdMmYy = true;
     }
     return nErr;
@@ -1563,24 +1703,35 @@ int ATCS::getDateFormat(bool &bDdMmYy )
 int ATCS::getStandardTime(std::string &sTime)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!TGst;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getStandardTime] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!TGst;", sResp);
     if(nErr)
         return nErr;
-    sTime.assign(szResp);
+    sTime.assign(sResp);
     return nErr;
 }
 
 int ATCS::getStandardDate(std::string &sDate)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!TGsd;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [getStandardDate] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!TGsd;", sResp);
     if(nErr)
         return nErr;
-    sDate.assign(szResp);
+
+    sDate.assign(sResp);
     return nErr;
 }
 
@@ -1588,18 +1739,21 @@ int ATCS::getStandardDate(std::string &sDate)
 int ATCS::setAsyncUpdateEnabled(bool bEnable)
 {
     int nErr = PLUGIN_OK;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sCmd;
+    std::string sResp;
 
-    if(!m_bIsConnected)
-        return NOT_CONNECTED;
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setAsyncUpdateEnabled] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
     if(bEnable) {
-        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!QSauYes;");
+        sCmd = "!QSauYes;";
     }
     else  {
-        snprintf(szCmd, SERIAL_BUFFER_SIZE, "!QSauNo;");
+        sCmd = "!QSauNo;";
     }
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+    nErr = ATCSSendCommand(sCmd, sResp);
 
     return nErr;
 }
@@ -1607,21 +1761,30 @@ int ATCS::setAsyncUpdateEnabled(bool bEnable)
 int ATCS::setEpochOfEntry(const char *szEpoch)
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
-    char szCmd[SERIAL_BUFFER_SIZE];
+    std::string sResp;
+    std::stringstream ssTmp;
 
-    snprintf(szCmd, SERIAL_BUFFER_SIZE, "!PSep%s;", szEpoch);
-    nErr = ATCSSendCommand(szCmd, szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [setEpochOfEntry] called." << std::endl;
+    m_sLogFile.flush();
+#endif
 
+    ssTmp << "!PSep" << szEpoch <<";";
+    nErr = ATCSSendCommand(ssTmp.str(), sResp);
     return nErr;
 }
 
 int ATCS::alignFromTargetRA_DecCalcSide()
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!AFcs;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [alignFromTargetRA_DecCalcSide] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!AFcs;", sResp);
 
     return nErr;
 }
@@ -1629,9 +1792,14 @@ int ATCS::alignFromTargetRA_DecCalcSide()
 int ATCS::alignFromTargetRA_DecCalcSideEpochNow()
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!AFcn;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [alignFromTargetRA_DecCalcSideEpochNow] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!AFcn;", sResp);
 
     return nErr;
 }
@@ -1639,30 +1807,18 @@ int ATCS::alignFromTargetRA_DecCalcSideEpochNow()
 int ATCS::alignFromLastPosition()
 {
     int nErr;
-    char szResp[SERIAL_BUFFER_SIZE];
+    std::string sResp;
 
-    nErr = ATCSSendCommand("!AFlp;", szResp, SERIAL_BUFFER_SIZE);
+#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
+    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [alignFromLastPosition] called." << std::endl;
+    m_sLogFile.flush();
+#endif
+
+    nErr = ATCSSendCommand("!AFlp;", sResp);
 
     return nErr;
 }
 
-void ATCS::convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsigned int size)
-{
-    int DD, MM, SS;
-    double mm, ss;
-
-    // convert dDeg decimal value to sDD:MM:SS
-
-    cSign = dDeg>=0?'+':'-';
-    dDeg = fabs(dDeg);
-    DD = int(dDeg);
-    mm = dDeg - DD;
-    MM = int(mm*60);
-    ss = (mm*60) - MM;
-    SS = int(std::roundf(ss*60));
-
-    snprintf(szResult, size, "%02d:%02d:%02d", DD, MM, SS);
-}
 
 void ATCS::convertDecDegToDDMMSS(double dDeg, std::string  &sResult, char &cSign)
 {
@@ -1684,31 +1840,6 @@ void ATCS::convertDecDegToDDMMSS(double dDeg, std::string  &sResult, char &cSign
     sResult.assign(ssTmp.str());
 }
 
-int ATCS::convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg)
-{
-    int nErr = PLUGIN_OK;
-    std::vector<std::string> vFieldsData;
-
-    dDecDeg = 0;
-
-    nErr = parseFields(szStrDeg, vFieldsData, ':');
-    if(nErr)
-        return nErr;
-
-    if(vFieldsData.size() >= 3) {
-        dDecDeg = std::stod(vFieldsData[0]);
-        if(dDecDeg <0) {
-            dDecDeg = dDecDeg - std::stod(vFieldsData[1])/60.0 - std::stod(vFieldsData[2])/3600.0;
-        }
-        else {
-            dDecDeg = dDecDeg + std::stod(vFieldsData[1])/60.0 + std::stod(vFieldsData[2])/3600.0;
-        }
-    }
-    else
-        nErr = ERR_PARSE;
-
-    return nErr;
-}
 
 int ATCS::convertDDMMSSToDecDeg(const std::string StrDeg, double &dDecDeg)
 {
@@ -1737,29 +1868,6 @@ int ATCS::convertDDMMSSToDecDeg(const std::string StrDeg, double &dDecDeg)
 }
 
 
-void ATCS::convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size)
-{
-    int HH, MM;
-    double hh, mm, SSt;
-    std::stringstream ssTmp;
-
-    // convert Ra value to HH:MM:SS.T before passing them to the ATCS
-    HH = int(dRa);
-    hh = dRa - HH;
-    MM = int(hh*60);
-    mm = (hh*60) - MM;
-    SSt = mm * 60;
-    ssTmp << std::setw(4) << std::fixed << std::setprecision(1) << SSt;
-
-#if defined PLUGIN_DEBUG && PLUGIN_DEBUG >= 2
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [convertRaToHHMMSSt] SSt " << SSt << std::endl;
-    m_sLogFile << "["<<getTimeStamp()<<"]"<< " [convertRaToHHMMSSt] ssTmp " << ssTmp.str() << std::endl;
-    m_sLogFile.flush();
-#endif
-
-    snprintf(szResult,SERIAL_BUFFER_SIZE, "%02d:%02d:%02.1f", HH, MM, std::stod(ssTmp.str()));
-}
-
 void ATCS::convertRaToHHMMSSt(double dRa, std::string &sResult)
 {
     int HH, MM;
@@ -1780,26 +1888,6 @@ void ATCS::convertRaToHHMMSSt(double dRa, std::string &sResult)
 }
 
 
-int ATCS::convertHHMMSStToRa(const char *szStrRa, double &dRa)
-{
-    int nErr = PLUGIN_OK;
-    std::vector<std::string> vFieldsData;
-
-    dRa = 0;
-
-    nErr = parseFields(szStrRa, vFieldsData, ':');
-    if(nErr)
-        return nErr;
-
-    if(vFieldsData.size() >= 3) {
-        dRa = atof(vFieldsData[0].c_str()) + atof(vFieldsData[1].c_str())/60.0 + atof(vFieldsData[2].c_str())/3600.0;
-    }
-    else
-        nErr = ERR_PARSE;
-
-    return nErr;
-}
-
 int ATCS::convertHHMMSStToRa(const std::string StrRa, double &dRa)
 {
     int nErr = PLUGIN_OK;
@@ -1817,25 +1905,6 @@ int ATCS::convertHHMMSStToRa(const std::string StrRa, double &dRa)
     else
         nErr = ERR_PARSE;
 
-    return nErr;
-}
-
-int ATCS::parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator)
-{
-    int nErr = PLUGIN_OK;
-    std::string sSegment;
-    std::stringstream ssTmp(pszIn);
-
-    svFields.clear();
-    // split the string into vector elements
-    while(std::getline(ssTmp, sSegment, cSeparator))
-    {
-        svFields.push_back(sSegment);
-    }
-
-    if(svFields.size()==0) {
-        nErr = ERR_PARSE;
-    }
     return nErr;
 }
 

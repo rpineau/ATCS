@@ -166,9 +166,7 @@ private:
     double  m_dHoursEast;
     double  m_dHoursWest;
     
-    int     ATCSSendCommand(const char *pszCmd, char *pszResult, unsigned int nResultMaxLen);
     int     ATCSSendCommand(const std::string sCmd, std::string &sResp, int nTimeout = MAX_TIMEOUT);
-    int     ATCSreadResponse(unsigned char *pszRespBuffer, unsigned int bufferLen, int nTimeout);
     int     ATCSreadResponse(std::string &sResult, int nTimeout = MAX_TIMEOUT);
 
     int     atclEnter();
@@ -178,9 +176,9 @@ private:
 
     int     getUsingSiteNumber(int &nSiteNb);
     int     getUsingSiteName(int nSiteNb, std::string &sSiteName);
-    int     setSiteLongitude(int nSiteNb, const char *szLongitude);
-    int     setSiteLatitude(int nSiteNb, const char *szLatitude);
-    int     setSiteTimezone(int nSiteNb, const char *szTimezone);
+    int     setSiteLongitude(int nSiteNb, const std::string sLongitude);
+    int     setSiteLatitude(int nSiteNb, const std::string sLatitude);
+    int     setSiteTimezone(int nSiteNb, const std::string sTimezone);
 
     int     getSiteLongitude(int nSiteNb, std::string &sLongitude);
     int     getSiteLatitude(int nSiteNb, std::string &sLatitude);
@@ -205,18 +203,13 @@ private:
     int     getSoftLimitEastAngle(double &dAngle);
     int     getSoftLimitWestAngle(double &dAngle);
 
-    void    convertDecDegToDDMMSS(double dDeg, char *szResult, char &cSign, unsigned int size);
     void    convertDecDegToDDMMSS(double dDeg, std::string  &sResult, char &cSign);
 
-    int     convertDDMMSSToDecDeg(const char *szStrDeg, double &dDecDeg);
     int     convertDDMMSSToDecDeg(const std::string StrDeg, double &dDecDeg);
 
-    void    convertRaToHHMMSSt(double dRa, char *szResult, unsigned int size);
     void    convertRaToHHMMSSt(double dRa, std::string &sResult);
 
-    int     convertHHMMSStToRa(const char *szStrRa, double &dRa);
     int     convertHHMMSStToRa(const std::string StrRa, double &dRa);
-    int     parseFields(const char *pszIn, std::vector<std::string> &svFields, char cSeparator);
     int     parseFields(const std::string szIn, std::vector<std::string> &svFields, char cSeparator);
 
     std::vector<std::string>    m_svSlewRateNames = { "ViewVel 1", "ViewVel 2", "ViewVel 3", "ViewVel 4",  "Slew"};
