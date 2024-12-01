@@ -427,7 +427,11 @@ bool X2Mount::isEstablishLinkAbortable(void) const
 
 void	X2Mount::driverInfoDetailedInfo(BasicStringInterface& str) const
 {
+#ifdef PLUGIN_DEBUG
+    str = "ATCS X2 plugin by Rodolphe Pineau [DEBUG]";
+#else
 	str = "ATCS X2 plugin by Rodolphe Pineau";
+#endif
 }
 
 double	X2Mount::driverInfoVersion(void) const

@@ -73,6 +73,8 @@ int ATCS::Connect(char *pszPort)
     if(!m_bIsConnected)
         return ERR_COMMNOLINK;
     timer.Reset();
+    m_pSerx->purgeTxRx();
+    
     while(true) {
         nErr = atclEnter();
         if(!nErr)
@@ -84,8 +86,8 @@ int ATCS::Connect(char *pszPort)
             return ERR_NOLINK;
         }
     }
-    setAsyncUpdateEnabled(false);
     disablePacketSeqChecking();
+    setAsyncUpdateEnabled(false);
 	disableStaticStatusChangeNotification();
     m_pSerx->purgeTxRx();
 
@@ -396,14 +398,11 @@ int ATCS::atclEnter()
 
     ssCmd<<char(ATCL_ENTER);
     nErr = ATCSSendCommand(ssCmd.str(), sResp);
-
-    nErr |= ATCSSendCommand("!QDcn;", sResp);
-
     return nErr;
 }
 
 
-#pragma mark - dome controller informations
+#pragma mark - controller informations
 
 int ATCS::getFirmwareVersion(std::string &sFirmware)
 {
@@ -1468,8 +1467,9 @@ int ATCS::disablePacketSeqChecking()
     m_sLogFile.flush();
 #endif
 
-    nErr = ATCSSendCommand("!QDps;", sResp);
-
+    nErr = ATCSSendCommand("!QDpsX;", sResp);
+    if(nErr) // try twice ss this is important ! 
+        nErr = ATCSSendCommand("!QDpsX;", sResp);
     return nErr;
 }
 
