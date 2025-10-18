@@ -185,21 +185,6 @@ int ATCS::Disconnect(void)
 }
 
 
-int ATCS::getNbSlewRates()
-{
-    return ATCS_NB_SLEW_SPEEDS;
-}
-
-// returns "Slew", "ViewVel4", "ViewVel3", "ViewVel2", "ViewVel1"
-int ATCS::getRateName(int nZeroBasedIndex, std::string &sOut)
-{
-    if (nZeroBasedIndex > ATCS_NB_SLEW_SPEEDS)
-        return ATCS_ERROR;
-
-    sOut.assign(m_svSlewRateNames[nZeroBasedIndex]);
-    return PLUGIN_OK;
-}
-
 #pragma mark - ATCS communication
 
 int ATCS::ATCSSendCommand(const std::string sCmd, std::string &sResp, int nTimeout)
@@ -886,7 +871,7 @@ int ATCS::getCustomTRateOffsetDec(double &dTrackDecArcSecPerHr)
     return nErr;
 }
 
-#pragma mark - Limis
+#pragma mark - Limits
 int ATCS::getLimits(double &dHoursEast, double &dHoursWest)
 {
     int nErr = PLUGIN_OK;
@@ -1056,6 +1041,22 @@ int ATCS::stopOpenLoopMove()
 
     return nErr;
 }
+
+int ATCS::getNbSlewRates()
+{
+	return ATCS_NB_SLEW_SPEEDS;
+}
+
+// returns "Slew", "ViewVel4", "ViewVel3", "ViewVel2", "ViewVel1"
+int ATCS::getRateName(int nZeroBasedIndex, std::string &sOut)
+{
+	if (nZeroBasedIndex > ATCS_NB_SLEW_SPEEDS)
+		return ATCS_ERROR;
+
+	sOut.assign(m_svSlewRateNames[nZeroBasedIndex]);
+	return PLUGIN_OK;
+}
+
 
 int ATCS::isSlewToComplete(bool &bComplete)
 {
